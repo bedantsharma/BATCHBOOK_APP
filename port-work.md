@@ -104,7 +104,7 @@ src/
 | 8 | Agent 8 | Students Screen | `(owner)/students.tsx` | ✅ Done |
 | 9 | Agent 9 | Fees Screen | `(owner)/fees.tsx` | ✅ Done |
 | 10 | Agent 10 | Attendance Screen | `(owner)/attendance.tsx` | ✅ Done |
-| 11 | Agent 11 | Tests Screen | `(owner)/tests.tsx` | ⬜ Pending |
+| 11 | Agent 11 | Tests Screen | `(owner)/tests.tsx` | ✅ Done |
 | 12 | Agent 12 | Student Dashboard | `(student)/_layout.tsx` + `(student)/dashboard.tsx` | ⬜ Pending |
 
 ## Completed Work Log
@@ -113,6 +113,41 @@ src/
 
 ---
 <!-- AGENTS APPEND BELOW THIS LINE -->
+
+### Agent 11 — Tests Screen (2026-06-28)
+
+**What was done:**
+- Reviewed Agent 10's attendance screen — no issues found. Confirmed: batch selector chips auto-selecting first batch, sessions FlatList with expand/collapse, lazy attendance load with caching, AttendanceSheet with checkbox rows and "Save Attendance" button, CreateSessionModal with date/start_time/end_time/topic fields, pull-to-refresh, empty states for no-batches and no-sessions. `npx tsc --noEmit` passed with zero errors before starting.
+- Implemented `src/app/(owner)/tests.tsx` (replaced placeholder)
+  - Batch selector chips (horizontal ScrollView, same pattern as fees/students/attendance screens); auto-selects first batch on mount; switching batch clears score cache
+  - `loadEnrollments(batchId)` fetches `getEnrollmentsByBatch(batchId)`, filters to `is_active !== false`, stores as `EnrollmentRow[]`
+  - FlatList of `StudentCard` items; each shows student name, score count (once loaded)
+  - Lazy score loading: first expand triggers `getStudentScores(enrollmentId)`, result stored in `scoreCache: Record<number, TestScore[]>`; subsequent expand/collapse reuses cache without re-fetching
+  - Scores displayed as `ScoreRow` items: test_name (bold), subject · date (secondary), obtained_marks/max_marks ("85 / 100"), percentage chip — ≥75%=C.success, ≥50%=C.warning, <50%=C.error
+  - "Add Score" button per student (shown when card is expanded): opens `AddScoreModal` as bottom sheet
+  - `AddScoreModal` fields match ACTUAL `TestScoreData` interface: `test_name`, `subject`, `date` (YYYY-MM-DD, pre-filled today), `max_marks`, `obtained_marks`; validation: all required, marks range check; calls `createTestScore({ enrollment_id, test_name, subject, date, max_marks, obtained_marks })` → prepends new score to cache
+  - Pull-to-refresh: clears `scoreCache`, reloads batches and enrollments
+  - Empty states: "No batches found" at batch level, "No students in this batch" inside FlatList, "No scores yet" inside each expanded student card
+  - `npx tsc --noEmit` passes with zero errors after implementation
+
+**Notes for Agent 12 (Student Dashboard):**
+- Source: `/Users/bedantsharma/PycharmProjects/BatchBook/batchbookui/src/components/student/StudentDashboard.jsx`
+- Files to create/replace:
+  - `src/app/(student)/_layout.tsx` — replace placeholder with real bottom tabs (4 tabs: Home, Schedule, Fees, Profile)
+  - `src/app/(student)/dashboard.tsx` — replace placeholder with the student dashboard
+- The student layout needs an auth guard: no session → redirect to `/(auth)/landing`; role !== 'student' → redirect to `/(auth)/onboarding`
+- Dashboard is a multi-tab screen. On mobile it was already tab-based in the source.
+- Home tab: student profile header, today's schedule (getTodaySchedule), upcoming events (getUpcomingEvents)
+- Schedule tab: attendance summary for current month (getAttendance(month))
+- Fees tab: fee status for current month (getFeeStatus(month)), month picker
+- Profile tab: student name, parent info; sign out button (useAuth().signOut())
+- All API from `../../services/dashboardService`
+- AsyncStorage keys: bb_student_id, bb_student_name
+- Use `useAuth()` from `../../context/AuthContext` for session and signOut
+- Tab icons: Home=home, Schedule=calendar-today, Fees=account-balance-wallet, Profile=person
+
+**Commits:**
+- feat: tests screen with student score cards, add score modal
 
 ### Agent 10 — Attendance Screen (2026-06-28)
 

@@ -1,6 +1,7 @@
-import { Tabs } from 'expo-router';
+import { Stack } from 'expo-router';
 
-// Placeholder — Agent 12 will replace with full tab configuration
+// Dashboard handles its own 4-tab navigation via internal useState.
+// This layout is a simple Stack wrapper with no visible header.
 export default function StudentLayout() {
-  return <Tabs screenOptions={{ headerShown: false }} />;
+  return <Stack screenOptions={{ headerShown: false }} />;
 }

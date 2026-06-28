@@ -105,7 +105,7 @@ src/
 | 9 | Agent 9 | Fees Screen | `(owner)/fees.tsx` | ✅ Done |
 | 10 | Agent 10 | Attendance Screen | `(owner)/attendance.tsx` | ✅ Done |
 | 11 | Agent 11 | Tests Screen | `(owner)/tests.tsx` | ✅ Done |
-| 12 | Agent 12 | Student Dashboard | `(student)/_layout.tsx` + `(student)/dashboard.tsx` | ⬜ Pending |
+| 12 | Agent 12 | Student Dashboard | `(student)/_layout.tsx` + `(student)/dashboard.tsx` | ✅ Done |
 
 ## Completed Work Log
 
@@ -113,6 +113,29 @@ src/
 
 ---
 <!-- AGENTS APPEND BELOW THIS LINE -->
+
+### Agent 12 — Student Dashboard (2026-06-28)
+
+**What was done:**
+- Reviewed Agent 11's tests screen — no issues found. Confirmed: batch selector chips (auto-selects first batch, clears score cache on switch), collapsible StudentCard with lazy score loading (first expand fetches, subsequent uses cache), ScoreRow with percentage color coding (≥75%=success, ≥50%=warning, <50%=error), AddScoreModal with correct field names (test_name/subject/date/max_marks/obtained_marks), pull-to-refresh clears scoreCache. `npx tsc --noEmit` passed with zero errors before starting.
+- Implemented `src/app/(student)/_layout.tsx` — simple Stack with `headerShown: false`; dashboard.tsx handles its own 4-tab navigation via internal state
+- Implemented `src/app/(student)/dashboard.tsx` — full student dashboard with 4 internal tabs (Home, Schedule, Fees, Profile)
+  - Auth guard: `!session && !authLoading` → redirect to `/(auth)/landing`; `role !== 'student'` → redirect to `/(auth)/onboarding`
+  - Custom bottom tab bar (`BottomTabBar`) with MaterialIcons: home, calendar-today, account-balance-wallet, person; active=C.primary, inactive=C.text2; uses `useSafeAreaInsets` for bottom padding
+  - Home tab: student name greeting, fee-due banner (if feeDue=true), attendance % summary card, today's schedule list, upcoming events list (slice to 5)
+  - Schedule tab: month picker (‹/›) + attendance summary from `getAttendance(month)` with per-batch breakdown; today's schedule + upcoming sections
+  - Fees tab: month picker + fee records from `getFeeStatus(month)` with status chip (color-coded: PAID/FULLY_PAID=success, PARTIAL/PARTIALLY_PAID=warning, NOT_PAID/PENDING=error)
+  - Profile tab: avatar (initials), student name + batch, phone/subjects/enrolledYear info rows, Sign Out button → `signOut()` → navigate to `/(auth)/landing`
+  - All data loaded in parallel via `Promise.all` on mount; per-tab month changes trigger individual API calls without full reload
+  - `npx tsc --noEmit` passes with zero errors after implementation
+
+**Migration complete!** All 12 tasks done.
+- Auth flow: Landing → PhoneLogin → OtpVerification → OnboardingWizard
+- Owner flow: Setup → (Batches, Students, Fees, Attendance, Tests) tabs
+- Student flow: Dashboard with 4 internal tabs
+
+**Commits:**
+- feat: student dashboard with home, schedule, fees, and profile tabs
 
 ### Agent 11 — Tests Screen (2026-06-28)
 

@@ -97,7 +97,7 @@ src/
 | 1 | Agent 1 | Foundation | Delete templates, install deps, theme, supabase, auth context, services, shared UI, root layout | ✅ Done |
 | 2 | Agent 2 | Landing Screen | `(auth)/landing.tsx` | ✅ Done |
 | 3 | Agent 3 | Phone Login | `(auth)/phone-login.tsx` | ✅ Done |
-| 4 | Agent 4 | OTP Verification | `(auth)/otp-verification.tsx` | ⬜ Pending |
+| 4 | Agent 4 | OTP Verification | `(auth)/otp-verification.tsx` | ✅ Done |
 | 5 | Agent 5 | Onboarding Wizard | `(auth)/onboarding.tsx` | ⬜ Pending |
 | 6 | Agent 6 | Owner Setup | `(owner)/setup.tsx` + `(owner)/_layout.tsx` | ⬜ Pending |
 | 7 | Agent 7 | Batches Screen | `(owner)/batches.tsx` | ⬜ Pending |
@@ -113,6 +113,36 @@ src/
 
 ---
 <!-- AGENTS APPEND BELOW THIS LINE -->
+
+### Agent 4 — OTP Verification Screen (2026-06-28)
+
+**What was done:**
+- Reviewed Agent 3's phone-login screen — no issues found. Confirmed: strips non-digits and caps at 10 chars in `onChangeText` (`t.replace(/\D/g, '').slice(0, 10)`), calls `api.post('/owner/generate_otp', { phone })`, on success navigates to `/(auth)/otp-verification` with `phone` param, uses `KeyboardAvoidingView`. `npx tsc --noEmit` passed with zero errors before starting.
+- Implemented `src/app/(auth)/otp-verification.tsx`
+- Receives `phone` via `useLocalSearchParams<{ phone: string }>()` (confirmed pattern with Context7 docs)
+- 6-digit OTP with auto-submit when all cells filled (calls `verify(val)` in `handleOtpChange`)
+- 60-second countdown timer using recursive `setTimeout` (matches source's intent; cleans up on unmount)
+- Resend resets countdown to 60 and calls `POST /owner/generate_otp` again
+- Calls `POST /owner/verify_otp` with `{ token: otp, phone }`, sets Supabase session via `supabase.auth.setSession()`, stores `bb_role=owner` in AsyncStorage
+- Checks `GET /owner/institute`: 404 → `/(owner)/setup`, 200 → `/(owner)/batches`; other errors re-thrown
+- Error clears the OTP input so user can re-enter fresh digits
+- `npx tsc --noEmit` passes with zero errors after implementation
+
+**Notes for Agent 5 (Onboarding Wizard):**
+- Source: `/Users/bedantsharma/PycharmProjects/BatchBook/batchbookui/src/components/onboarding/OnboardingWizard.jsx`
+- File to create: `src/app/(auth)/onboarding.tsx`
+- Multi-step wizard: step 1 = role selection (owner/student), step 2 = profile details
+- For owner role: at end navigate to `/(auth)/phone-login`
+- For student role: save `onboarding_profile` to AsyncStorage as JSON, then navigate to student login or wait for join link
+- Progress bar (flex-based) across top
+- Use `AppButton`, `AppInput`, `AppText` from shared components
+- Store: `await AsyncStorage.setItem('onboarding_profile', JSON.stringify(profileData))`
+- Read the source carefully for all steps and field names
+
+**Commits:**
+- feat: OTP verification with auto-submit, countdown timer, and session setup
+
+---
 
 ### Agent 3 — Phone Login Screen (2026-06-28)
 

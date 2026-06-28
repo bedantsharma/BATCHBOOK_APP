@@ -99,7 +99,7 @@ src/
 | 3 | Agent 3 | Phone Login | `(auth)/phone-login.tsx` | ✅ Done |
 | 4 | Agent 4 | OTP Verification | `(auth)/otp-verification.tsx` | ✅ Done |
 | 5 | Agent 5 | Onboarding Wizard | `(auth)/onboarding.tsx` | ✅ Done |
-| 6 | Agent 6 | Owner Setup | `(owner)/setup.tsx` + `(owner)/_layout.tsx` | ⬜ Pending |
+| 6 | Agent 6 | Owner Setup | `(owner)/setup.tsx` + `(owner)/_layout.tsx` | ✅ Done |
 | 7 | Agent 7 | Batches Screen | `(owner)/batches.tsx` | ⬜ Pending |
 | 8 | Agent 8 | Students Screen | `(owner)/students.tsx` | ⬜ Pending |
 | 9 | Agent 9 | Fees Screen | `(owner)/fees.tsx` | ⬜ Pending |
@@ -113,6 +113,42 @@ src/
 
 ---
 <!-- AGENTS APPEND BELOW THIS LINE -->
+
+### Agent 6 — Owner Setup + Tab Layout (2026-06-28)
+
+**What was done:**
+- Reviewed Agent 5's onboarding wizard — no issues found. Confirmed: 3-step in-screen state machine, step 1 role card auto-advances to step 2, step 2 shows name-only for owner and name+parent name+parent phone for student, saves `onboarding_profile` to AsyncStorage in step 3 handler, owner path ends at `/(auth)/phone-login`, student path shows join-link info then "Done" returns to landing, progress bar (3px flex track) across top. `npx tsc --noEmit` passed with zero errors.
+- Installed `@expo/vector-icons` (was missing from project deps)
+- Implemented `src/app/(owner)/_layout.tsx` — 5-tab bottom navigator with auth guard
+  - Tabs: Batches (layers), Students (people), Fees (attach-money), Attendance (check-circle), Tests (assignment)
+  - Active tint: C.primary (#BB86FC), inactive: C.text2, tab bar bg: C.surface (#1E1E1E)
+  - `setup` hidden from tab bar via `href: null` (confirmed via Context7 docs)
+  - Auth guard: `!loading && !session` → `router.replace('/(auth)/landing')`, returns `<LoadingScreen />` while loading
+  - Fixed TypeScript: `color as string` cast in tabBarIcon callbacks (tabBarIcon receives `ColorValue` not plain `string`)
+- Implemented `src/app/(owner)/setup.tsx` — institute setup form
+  - Fields: name (required) + city (optional as per task spec), POST to `/owner/institute`
+  - 409 (already exists) → `router.replace('/(owner)/batches')`
+  - Success (201/200) → `router.replace('/(owner)/batches')`
+  - Inline error display under name field, button disabled until name is non-empty
+- `npx tsc --noEmit` passes with zero errors after all changes
+
+**Notes for Agent 7 (Batches Screen):**
+- Source: `/Users/bedantsharma/PycharmProjects/BatchBook/batchbookui/src/pages/owner/BatchesPage.jsx`
+- File to replace: `src/app/(owner)/batches.tsx`
+- The screen shows a FlatList of batch cards. Each card shows: name, subject, grade, status badge (ACTIVE/CLOSING/ARCHIVED), timing, days of week, enrolled/capacity counts
+- Add Student button per card → opens a modal to enroll a student into that batch
+- Create Batch button (FAB or header button) → opens a create-batch modal
+- API calls:
+  - `getBatches()` from `../../services/ownerService` on mount
+  - `createBatch(data)` for new batch
+  - `inviteStudent(data)` for enrolling student (from StudentsPage but used here too)
+- Status badge colors: ACTIVE=C.success, CLOSING=C.warning, ARCHIVED=C.text2
+- Use `FlatList` from react-native (not ScrollView) for the list
+- Modal: use `Modal` from react-native with a dark overlay
+- Batch form fields: name, subject, grade, timing (string), days_of_week (multi-select), capacity (number), status
+
+**Commits:**
+- feat: owner tab layout with auth guard and institute setup screen
 
 ### Agent 5 — Onboarding Wizard (2026-06-28)
 

@@ -103,7 +103,7 @@ src/
 | 7 | Agent 7 | Batches Screen | `(owner)/batches.tsx` | ✅ Done |
 | 8 | Agent 8 | Students Screen | `(owner)/students.tsx` | ✅ Done |
 | 9 | Agent 9 | Fees Screen | `(owner)/fees.tsx` | ✅ Done |
-| 10 | Agent 10 | Attendance Screen | `(owner)/attendance.tsx` | ⬜ Pending |
+| 10 | Agent 10 | Attendance Screen | `(owner)/attendance.tsx` | ✅ Done |
 | 11 | Agent 11 | Tests Screen | `(owner)/tests.tsx` | ⬜ Pending |
 | 12 | Agent 12 | Student Dashboard | `(student)/_layout.tsx` + `(student)/dashboard.tsx` | ⬜ Pending |
 
@@ -113,6 +113,39 @@ src/
 
 ---
 <!-- AGENTS APPEND BELOW THIS LINE -->
+
+### Agent 10 — Attendance Screen (2026-06-28)
+
+**What was done:**
+- Reviewed Agent 9's fees screen — no issues found. Confirmed: month picker with ‹/› arrows defaulting to current month, 4 summary cards in 2×2 grid from `getFeeDashboard`, batch selector chips (active batches only), fee record list with Pay and Remind buttons (hidden when PAID), Mark Payment modal (pre-filled amount_due + optional reference), Fee Setup modal, pull-to-refresh. `npx tsc --noEmit` passed with zero errors before starting.
+- Implemented `src/app/(owner)/attendance.tsx` (replaced placeholder)
+  - Batch selector chips (horizontal ScrollView, same pattern as fees/students) — auto-selects first batch on mount
+  - `loadBatchData(batchId)` fetches `getEnrollmentsByBatch` + `getBatchSessions` in parallel via `Promise.all`; filters enrollments to `is_active !== false`; sorts sessions newest-first
+  - FlatList of `SessionCard` items, each showing date (formatted with `en-IN` locale: "Mon, 28 Jun 2026"), optional topic subtitle, expand/collapse chevron
+  - Lazy attendance load: first expand triggers `getSessionAttendance(sessionId)`, result cached in component state; subsequent expands/collapses use cached data
+  - Attendance summary chip shown once loaded: "X/Y present" in green (all present) or amber (partial)
+  - Inline `AttendanceSheet` when expanded: present/absent count chips, "Mark All Present" shortcut, one `Pressable` row per active enrollment with `MaterialIcons` `check-box` / `check-box-outline-blank` toggle, "Save Attendance" button → `markAttendance(sessionId, [...presentIds])` → `toastEmitter.emit('Attendance saved!', 'success')`
+  - `+` button in header opens `CreateSessionModal`: date (YYYY-MM-DD, pre-filled today), start_time (HH:MM, default 16:00), end_time (HH:MM, default 17:00), topic (optional); `appendSeconds()` helper converts HH:MM → HH:MM:00; calls `createSession(SessionData)` then refreshes session list
+  - Pull-to-refresh via `RefreshControl` re-runs `loadBatchData`
+  - No-batches empty state (points to batches tab); no-sessions empty state per batch
+  - TypeScript: local `Session` interface for `getBatchSessions` (`unknown[]`) cast; local `AttendanceRow` for `getSessionAttendance`/`markAttendance` (`unknown`) cast; `EnrollmentRow = Enrollment & { student_name?: string }` for API-enriched field
+- `npx tsc --noEmit` passes with zero errors after implementation
+
+**Notes for Agent 11 (Tests Screen):**
+- Source: `/Users/bedantsharma/PycharmProjects/BatchBook/batchbookui/src/pages/owner/TestsPage.jsx`
+- File to replace: `src/app/(owner)/tests.tsx`
+- Batch selector at top (same chip pattern)
+- Per batch: load enrollments with `getEnrollmentsByBatch(batchId)`
+- Per enrollment: load scores with `getStudentScores(enrollmentId)`
+- Show students in a list; tap to expand and see their scores
+- "Add Score" button per student opens a modal: test_name, score, max_score, test_date (YYYY-MM-DD) → `createTestScore({ enrollment_id, test_name, score, max_score, test_date })`
+- Score row: test name, score/max (e.g. "85 / 100"), percentage, date
+- Percentage color: ≥75%=C.success, ≥50%=C.warning, <50%=C.error
+- All API from ownerService; read actual field names
+- Note: `TestScoreData` in ownerService has fields: `enrollment_id`, `test_name`, `subject`, `date`, `max_marks`, `obtained_marks` — NOT `score`/`max_score`/`test_date`; read ownerService.ts carefully before writing
+
+**Commits:**
+- feat: attendance screen with session list, create session, attendance sheet
 
 ### Agent 9 — Fees Screen (2026-06-28)
 

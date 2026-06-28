@@ -101,7 +101,7 @@ src/
 | 5 | Agent 5 | Onboarding Wizard | `(auth)/onboarding.tsx` | ✅ Done |
 | 6 | Agent 6 | Owner Setup | `(owner)/setup.tsx` + `(owner)/_layout.tsx` | ✅ Done |
 | 7 | Agent 7 | Batches Screen | `(owner)/batches.tsx` | ✅ Done |
-| 8 | Agent 8 | Students Screen | `(owner)/students.tsx` | ⬜ Pending |
+| 8 | Agent 8 | Students Screen | `(owner)/students.tsx` | ✅ Done |
 | 9 | Agent 9 | Fees Screen | `(owner)/fees.tsx` | ⬜ Pending |
 | 10 | Agent 10 | Attendance Screen | `(owner)/attendance.tsx` | ⬜ Pending |
 | 11 | Agent 11 | Tests Screen | `(owner)/tests.tsx` | ⬜ Pending |
@@ -113,6 +113,41 @@ src/
 
 ---
 <!-- AGENTS APPEND BELOW THIS LINE -->
+
+### Agent 8 — Students Screen (2026-06-28)
+
+**What was done:**
+- Reviewed Agent 7's batches screen — no issues found. Confirmed: FlatList with `keyExtractor` using `item.id.toString()` (Batch.id is `number`), Create Batch modal with correct fields (name/subject/grade/start_time/end_time/max_capacity), Add Student modal calling `inviteStudent` with `batch_id: number`, pull-to-refresh with RefreshControl, empty state component. `npx tsc --noEmit` passed with zero errors before starting.
+- Implemented `src/app/(owner)/students.tsx` (replaced placeholder)
+  - Loads all batches with `getBatches()`, then loads enrollments per batch in parallel with `Promise.all(batches.map(b => getEnrollmentsByBatch(b.id)))`, flattens into a single `EnrollmentRow[]`
+  - Batch filter chips (horizontal ScrollView): "All Batches" + one chip per batch; uses `number | 'all'` state type to match `Batch.id: number`
+  - Search bar (client-side, case-insensitive) filters by `student_name` or falls back to `Student #${student_id}`
+  - `EnrollmentRow` card: student name (denormalized from API), batch name, due day with ordinal suffix, first month fee in ₹, fee status chip
+  - Fee status color map handles both web-source values (FULLY_PAID/PARTIALLY_PAID/NOT_PAID) and ownerService FeeRecord values (PAID/PARTIAL/PENDING)
+  - Remove button → `Alert.alert` confirmation → `removeEnrollment(id: number)`
+  - Add Student modal: batch selector chips (horizontal scroll) + student/parent fields; calls `inviteStudent({ batch_id: number, ... })`
+  - Pull-to-refresh via `RefreshControl`, empty state with context-aware message (search vs empty)
+  - Key type fixes vs spec template: `selectedBatchId: number | null` (not string), `removeEnrollment` receives `number`, `EnrollmentRow` intersection type adds `student_name?/fee_status?` for API-only fields, `keyExtractor` uses `.toString()`
+- `npx tsc --noEmit` passes with zero errors after implementation
+
+**Notes for Agent 9 (Fees Screen):**
+- Source: `/Users/bedantsharma/PycharmProjects/BatchBook/batchbookui/src/pages/owner/FeesPage.jsx`
+- File to replace: `src/app/(owner)/fees.tsx`
+- Month picker: no HTML date input in RN — use a simple text display with prev/next arrow buttons to change month (format: YYYY-MM)
+- 4 summary cards at top: Total Due, Collected, Pending, Collection Rate — from `getFeeDashboard(month)`
+- Per-batch sections (use batch tabs or a batch filter like students screen)
+- Per batch: fee structure display + "Generate Records" button + list of fee records
+- Each fee record: student name, amount due, amount paid, status chip, "Mark Paid" button + "WhatsApp Reminder" button
+- Mark Paid modal: amount_paid field + optional reference — calls `markPayment(recordId, amountPaid, reference)` where all IDs are `number`
+- WhatsApp reminder: calls `sendFeeReminder(recordId: number)` (no UI modal needed, just a button)
+- Fee setup modal: calls `setupFeeStructure(batchId: number, monthlyAmount: number)` if no fee structure exists
+- API functions all from `../../services/ownerService`
+- The month controls should default to the current month (new Date() → format YYYY-MM)
+- All IDs in ownerService are `number` (Batch.id, Enrollment.id, FeeRecord.id) — do NOT use string IDs
+- FeeRecord.status values: `'PENDING' | 'PAID' | 'PARTIAL' | 'NOT_PAID' | 'PARTIALLY_PAID'`
+
+**Commits:**
+- feat: students screen with enrollment list, batch filter, search, remove
 
 ### Agent 7 — Batches Screen (2026-06-28)
 

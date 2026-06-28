@@ -102,7 +102,7 @@ src/
 | 6 | Agent 6 | Owner Setup | `(owner)/setup.tsx` + `(owner)/_layout.tsx` | ✅ Done |
 | 7 | Agent 7 | Batches Screen | `(owner)/batches.tsx` | ✅ Done |
 | 8 | Agent 8 | Students Screen | `(owner)/students.tsx` | ✅ Done |
-| 9 | Agent 9 | Fees Screen | `(owner)/fees.tsx` | ⬜ Pending |
+| 9 | Agent 9 | Fees Screen | `(owner)/fees.tsx` | ✅ Done |
 | 10 | Agent 10 | Attendance Screen | `(owner)/attendance.tsx` | ⬜ Pending |
 | 11 | Agent 11 | Tests Screen | `(owner)/tests.tsx` | ⬜ Pending |
 | 12 | Agent 12 | Student Dashboard | `(student)/_layout.tsx` + `(student)/dashboard.tsx` | ⬜ Pending |
@@ -113,6 +113,41 @@ src/
 
 ---
 <!-- AGENTS APPEND BELOW THIS LINE -->
+
+### Agent 9 — Fees Screen (2026-06-28)
+
+**What was done:**
+- Reviewed Agent 8's students screen — no issues found. Confirmed: loads all batches then enrollments per batch in parallel with `Promise.all`, batch filter chips with `number | 'all'` state, search bar (client-side, case-insensitive), enrollment cards with student name/batch/fee status chip/remove button, `Alert.alert` confirmation before remove, Add Student modal with batch selector chips, pull-to-refresh with `RefreshControl`. `npx tsc --noEmit` passed with zero errors before starting.
+- Implemented `src/app/(owner)/fees.tsx` (replaced placeholder)
+  - Month picker with `‹` / `›` arrow buttons and formatted label (e.g. "Jun 2026"); defaults to current month via `new Date().toISOString().slice(0, 7)`; `prevMonth`/`nextMonth` helpers using `Date.setMonth`
+  - 4 summary cards in a 2×2 grid from `getFeeDashboard(month)`: Total Due (primary), Collected (success), Pending (warning), Collection Rate (secondary)
+  - Batch selector chips (horizontal ScrollView, same chip pattern as students screen); filters to active batches only (`status !== 'ARCHIVED'`); auto-selects first batch on load
+  - Per-batch: loads `getFeeStructure(batchId)` — if null/404, shows "Set Up Fees" button; otherwise shows monthly fee chip with "Edit" link
+  - "Generate Records" button shown inline when structure exists but records list is empty → calls `generateMonthlyRecords(batchId, month)`
+  - FlatList of fee records (FeeRecordRow) — student name (denormalized from API), amount due, amount paid, status chip, "Pay" and "🔔 Remind" buttons (hidden when status=PAID)
+  - Fee status chip: PAID=`C.success`, PARTIAL=`C.warning`, PENDING/NOT_PAID=`C.error`; handles both web enum names and ownerService names
+  - Mark Payment modal: amount_paid (pre-filled with amount_due), reference (optional); calls `markPayment(recordId, amount, reference)`; updates record in list + refreshes dashboard
+  - Fee Setup modal: monthly_amount field; calls `setupFeeStructure(batchId, monthlyAmount)`; reloads structure + records + dashboard
+  - Remind button: calls `sendFeeReminder(recordId)` directly, tracks in-flight ids via `Set<number>`, shows "Sending…" while pending
+  - Pull-to-refresh on full FlatList (calls all four load functions in parallel)
+  - TypeScript fix: removed `status === 'FULLY_PAID'` comparison (not in `FeeRecord.status` union type in ownerService.ts; only `'PAID'` is the canonical paid value)
+- `npx tsc --noEmit` passes with zero errors after implementation
+
+**Notes for Agent 10 (Attendance Screen):**
+- Source: `/Users/bedantsharma/PycharmProjects/BatchBook/batchbookui/src/pages/owner/AttendancePage.jsx`
+- File to replace: `src/app/(owner)/attendance.tsx`
+- Batch selector at top (same chip pattern)
+- Session list: each session shows date, topic, expand/collapse for attendance details
+- Create Session form/modal: date + topic fields → `createSession({ batch_id, date, topic })`
+- Mark Attendance: expandable per-session list of students with checkboxes → `markAttendance(sessionId, presentEnrollmentIds[])`
+- Get sessions: `getBatchSessions(batchId)`
+- Get session attendance: `getSessionAttendance(sessionId)` — returns which enrollments were present
+- Get enrollments for batch: `getEnrollmentsByBatch(batchId)` — to show the full attendance sheet
+- Attendance summary per student: `getStudentAttendanceSummary(enrollmentId, month)` — optional, show if useful
+- All API from ownerService; read actual field names from ownerService.ts
+
+**Commits:**
+- feat: fees screen with month picker, summary cards, fee records, pay modal
 
 ### Agent 8 — Students Screen (2026-06-28)
 

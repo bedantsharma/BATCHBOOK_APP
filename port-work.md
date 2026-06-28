@@ -100,7 +100,7 @@ src/
 | 4 | Agent 4 | OTP Verification | `(auth)/otp-verification.tsx` | ✅ Done |
 | 5 | Agent 5 | Onboarding Wizard | `(auth)/onboarding.tsx` | ✅ Done |
 | 6 | Agent 6 | Owner Setup | `(owner)/setup.tsx` + `(owner)/_layout.tsx` | ✅ Done |
-| 7 | Agent 7 | Batches Screen | `(owner)/batches.tsx` | ⬜ Pending |
+| 7 | Agent 7 | Batches Screen | `(owner)/batches.tsx` | ✅ Done |
 | 8 | Agent 8 | Students Screen | `(owner)/students.tsx` | ⬜ Pending |
 | 9 | Agent 9 | Fees Screen | `(owner)/fees.tsx` | ⬜ Pending |
 | 10 | Agent 10 | Attendance Screen | `(owner)/attendance.tsx` | ⬜ Pending |
@@ -113,6 +113,38 @@ src/
 
 ---
 <!-- AGENTS APPEND BELOW THIS LINE -->
+
+### Agent 7 — Batches Screen (2026-06-28)
+
+**What was done:**
+- Reviewed Agent 6's tab layout and setup screen — no issues found. Confirmed: 5 visible tabs (Batches, Students, Fees, Attendance, Tests) + `setup` hidden via `href: null`, auth guard redirects to `/(auth)/landing` when no session, setup form has `name` + `city` fields POSTing to `/owner/institute` with 409 handled, `npx tsc --noEmit` passed with zero errors before starting.
+- Implemented `src/app/(owner)/batches.tsx` (replaced placeholder)
+  - FlatList of batch cards; `keyExtractor` uses `item.id.toString()` (Batch.id is `number`)
+  - Each card: name, subject/grade row, status badge, timing (formatted from `start_time`/`end_time`), days of week joined with ` · `, capacity progress bar (loads active enrollment count per card via `getEnrollmentsByBatch`), "Add Student" button
+  - Status badge colors: ACTIVE=`C.success`, CLOSING=`C.warning`, ARCHIVED=`C.text2`
+  - Header: "Batches" title + "+" `Pressable` to open create modal
+  - Create Batch Modal (bottom sheet, `animationType="slide"`): name/subject/grade/start_time/end_time/capacity fields; calls `createBatch(Partial<Batch>)`
+  - Add Student Modal: student_name/parent_name/parent_phone/due_day/first_month_amount; calls `inviteStudent` with `batch_id: number`
+  - Pull-to-refresh via `RefreshControl`, empty state with 📚 emoji and "Tap + to create your first batch"
+  - Key adaptation from web source: web uses `timing` string and `enrolled_count` field — RN version formats time from `start_time`/`end_time` and loads enrollment count via separate `getEnrollmentsByBatch` call per card (same pattern as web's `BatchCard` useEffect)
+- `npx tsc --noEmit` passes with zero errors after implementation
+
+**Notes for Agent 8 (Students Screen):**
+- Source: `/Users/bedantsharma/PycharmProjects/BatchBook/batchbookui/src/pages/owner/StudentsPage.jsx`
+- File to replace: `src/app/(owner)/students.tsx`
+- Shows a flat list of all enrollments across all batches
+- Has a batch filter (Picker/dropdown at top) and search bar
+- Each row: student name, batch name, due day, first month fee, fee status chip, remove button
+- Fee status chip colors: PAID=C.success, PARTIAL=C.warning, PENDING=C.error
+- Remove enrollment calls `removeEnrollment(enrollmentId)` with confirmation
+- Search filters by student name (client-side)
+- Batch filter: "All Batches" + each batch name; filters enrollment list client-side
+- Also has "Add Student" button that opens the same modal pattern as BatchesPage (calls `inviteStudent`)
+- API: `getBatches()`, `getEnrollmentsByBatch(batchId)` for each batch (or load all then flatten)
+- Import from `../../services/ownerService`
+
+**Commits:**
+- feat: batches screen with cards, create batch modal, add student modal
 
 ### Agent 6 — Owner Setup + Tab Layout (2026-06-28)
 

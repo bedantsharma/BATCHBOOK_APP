@@ -96,7 +96,7 @@ src/
 |---|-------|------|---------------|--------|
 | 1 | Agent 1 | Foundation | Delete templates, install deps, theme, supabase, auth context, services, shared UI, root layout | ✅ Done |
 | 2 | Agent 2 | Landing Screen | `(auth)/landing.tsx` | ✅ Done |
-| 3 | Agent 3 | Phone Login | `(auth)/phone-login.tsx` | ⬜ Pending |
+| 3 | Agent 3 | Phone Login | `(auth)/phone-login.tsx` | ✅ Done |
 | 4 | Agent 4 | OTP Verification | `(auth)/otp-verification.tsx` | ⬜ Pending |
 | 5 | Agent 5 | Onboarding Wizard | `(auth)/onboarding.tsx` | ⬜ Pending |
 | 6 | Agent 6 | Owner Setup | `(owner)/setup.tsx` + `(owner)/_layout.tsx` | ⬜ Pending |
@@ -113,6 +113,36 @@ src/
 
 ---
 <!-- AGENTS APPEND BELOW THIS LINE -->
+
+### Agent 3 — Phone Login Screen (2026-06-28)
+
+**What was done:**
+- Reviewed Agent 2's landing screen — no issues found. Confirmed: `SafeAreaView` from `react-native-safe-area-context`, `useRouter` from `expo-router`, both CTA buttons navigate correctly, all colors use `C` tokens, `npx tsc --noEmit` passes with zero errors.
+- Implemented `src/app/(auth)/phone-login.tsx`
+- 10-digit Indian phone validation (`/^\d{10}$/`); strips non-digits and caps at 10 chars in `onChangeText`
+- Calls `POST /owner/generate_otp` via the shared `api` axios instance
+- On success navigates to `/(auth)/otp-verification` with `phone` as a query param via `router.push({ pathname, params })`
+- `KeyboardAvoidingView` wrapping the form for iOS (`padding`) / Android (`height`) keyboard handling
+- Back button using `router.back()`, loading state on submit button, inline error below the input
+- `autoFocus` on the phone input for immediate keyboard presentation
+- Queried Context7 docs (expo-router, `/websites/expo_dev`) — confirmed `router.push({ pathname, params })` and `useLocalSearchParams` API for Expo SDK 56 / expo-router
+
+**Notes for Agent 4 (OTP Verification):**
+- Source: `/Users/bedantsharma/PycharmProjects/BatchBook/batchbookui/src/components/OtpVerification.jsx`
+- Receives `phone` as a query param — use `useLocalSearchParams()` from `expo-router` to get it
+- Calls `POST /owner/verify_otp` with `{ token: otp, phone }`
+- Response has `{ auth_token, refresh_token }` → call `supabase.auth.setSession({ access_token: auth_token, refresh_token })`
+- After session set: `await AsyncStorage.setItem('bb_role', 'owner')`
+- Then check `/owner/institute` — if 404 navigate to `/(owner)/setup`, else navigate to `/(owner)/batches`
+- Has a 60-second resend timer (counts down, then enables "Resend OTP" button)
+- Use `OtpInput` component from `../../components/OtpInput` (6 cells, auto-focus)
+- Import `supabase` from `../../lib/supabaseClient`
+- Import `AsyncStorage` from `@react-native-async-storage/async-storage`
+
+**Commits:**
+- feat: phone login screen with OTP request and 10-digit validation
+
+---
 
 ### Agent 2 — Landing Screen (2026-06-28)
 

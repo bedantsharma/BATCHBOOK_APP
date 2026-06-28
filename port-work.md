@@ -95,7 +95,7 @@ src/
 | # | Agent | Task | Screen/Module | Status |
 |---|-------|------|---------------|--------|
 | 1 | Agent 1 | Foundation | Delete templates, install deps, theme, supabase, auth context, services, shared UI, root layout | ✅ Done |
-| 2 | Agent 2 | Landing Screen | `(auth)/landing.tsx` | ⬜ Pending |
+| 2 | Agent 2 | Landing Screen | `(auth)/landing.tsx` | ✅ Done |
 | 3 | Agent 3 | Phone Login | `(auth)/phone-login.tsx` | ⬜ Pending |
 | 4 | Agent 4 | OTP Verification | `(auth)/otp-verification.tsx` | ⬜ Pending |
 | 5 | Agent 5 | Onboarding Wizard | `(auth)/onboarding.tsx` | ⬜ Pending |
@@ -113,6 +113,31 @@ src/
 
 ---
 <!-- AGENTS APPEND BELOW THIS LINE -->
+
+### Agent 2 — Landing Screen (2026-06-28)
+
+**What was done:**
+- Reviewed Agent 1's foundation code — no issues found. All key files verified: `colors.ts` exports `default C` and named `radius`; `supabaseClient.ts` uses `AsyncStorage` adapter; `AuthContext.tsx` exports `useAuth` and `AuthProvider`; `api.ts` uses `process.env.EXPO_PUBLIC_API_BASE_URL`; all 8 shared components exist; `_layout.tsx` wraps with `AuthProvider` + `ToastProvider` + DM Sans fonts; `index.tsx` redirects based on `bb_role` from AsyncStorage.
+- Implemented `src/app/(auth)/landing.tsx` — full landing screen replacing the placeholder
+  - Hero section: LogoMark (64px) + "BatchBook" title + tagline
+  - 4 feature cards (Batch Management, Fee Tracking, Attendance, Test Scores) using `AppCard`
+  - Two CTA buttons: "I'm a Tutor →" → `/(auth)/phone-login`, "I'm a Student" → `/(auth)/onboarding`
+  - Privacy policy footer text
+  - `SafeAreaView` + `ScrollView` for safe rendering on all screen sizes
+  - All colors from `C` (`src/constants/colors.ts`)
+- Queried Context7 docs for expo-router v56 — confirmed `useRouter` + `router.push` API is correct
+- `npx tsc --noEmit` passes with zero errors
+
+**Notes for Agent 3 (Phone Login screen):**
+- Source: `/Users/bedantsharma/PycharmProjects/BatchBook/batchbookui/src/components/PhoneLogin.jsx`
+- Calls `POST /owner/generate_otp` with `{ phone }` via the `api` service
+- On success: navigate to `/(auth)/otp-verification` passing `phoneNumber` as a param
+- Validates 10-digit Indian phone number (digits only, length 10)
+- Use `AppInput` for phone field, `AppButton` for submit
+- Import `api` from `../../services/api`
+
+**Commits:**
+- feat: landing screen with hero, features, and CTA buttons
 
 ### Agent 1 — Foundation (2026-06-28)
 

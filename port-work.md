@@ -98,7 +98,7 @@ src/
 | 2 | Agent 2 | Landing Screen | `(auth)/landing.tsx` | ✅ Done |
 | 3 | Agent 3 | Phone Login | `(auth)/phone-login.tsx` | ✅ Done |
 | 4 | Agent 4 | OTP Verification | `(auth)/otp-verification.tsx` | ✅ Done |
-| 5 | Agent 5 | Onboarding Wizard | `(auth)/onboarding.tsx` | ⬜ Pending |
+| 5 | Agent 5 | Onboarding Wizard | `(auth)/onboarding.tsx` | ✅ Done |
 | 6 | Agent 6 | Owner Setup | `(owner)/setup.tsx` + `(owner)/_layout.tsx` | ⬜ Pending |
 | 7 | Agent 7 | Batches Screen | `(owner)/batches.tsx` | ⬜ Pending |
 | 8 | Agent 8 | Students Screen | `(owner)/students.tsx` | ⬜ Pending |
@@ -113,6 +113,32 @@ src/
 
 ---
 <!-- AGENTS APPEND BELOW THIS LINE -->
+
+### Agent 5 — Onboarding Wizard (2026-06-28)
+
+**What was done:**
+- Reviewed Agent 4's OTP verification screen — no issues found. Confirmed: `useLocalSearchParams<{ phone: string }>()` to get the phone param; calls `POST /owner/verify_otp` with `{ token: otp, phone }`; sets Supabase session via `supabase.auth.setSession({ access_token: data.auth_token, refresh_token: data.refresh_token })`; stores `bb_role=owner` in AsyncStorage; checks `GET /owner/institute` — 404 → `/(owner)/setup`, 200 → `/(owner)/batches`; 60-second countdown timer with resend; auto-submits when 6 digits filled. `npx tsc --noEmit` passed with zero errors.
+- Implemented `src/app/(auth)/onboarding.tsx` — 3-step in-screen wizard
+- Step 1: role selection (Tutor / Student) with tappable cards highlighted by `borderColor: C.primary` when selected
+- Step 2: profile fields (name only for owner; name + parent name + parent phone for student); phone strips non-digits and caps at 10
+- Step 3: owner → "Almost there!" + "Continue to Login →" saves `onboarding_profile` to AsyncStorage then `router.replace('/(auth)/phone-login')`; student → "Ask your tutor" info screen with styled join-link example + "Done" returns to landing
+- Progress bar (3px flex-based track) across top; back button navigates between steps
+- Fixed TypeScript issues vs template: AppCard `style` prop is `ViewStyle` not `StyleProp<ViewStyle>` — merged active styles with object spread; avoided nested `AppText` for the join-link example (used plain `<Text>` in a styled box instead); fixed `AppText style` usage to avoid array form
+- `npx tsc --noEmit` passes with zero errors after implementation
+
+**Notes for Agent 6 (Owner Setup + Owner Tab Layout):**
+- Source for setup: `/Users/bedantsharma/PycharmProjects/BatchBook/batchbookui/src/pages/owner/OwnerSetup.jsx`
+- Source for shell: `/Users/bedantsharma/PycharmProjects/BatchBook/batchbookui/src/pages/owner/OwnerDashboard.jsx`
+- Files to create/replace:
+  - `src/app/(owner)/_layout.tsx` — replace the placeholder with real bottom tabs (5 tabs: Batches, Students, Fees, Attendance, Tests) with MaterialIcons from `@expo/vector-icons`
+  - `src/app/(owner)/setup.tsx` — replace placeholder with the real setup form
+- Setup form: two fields: `name` (institute name) and `city`. Posts to `POST /owner/institute`. On 409 (already exists), navigate to `/(owner)/batches`. On success, also navigate to `/(owner)/batches`.
+- Tab layout must use `useAuth()` to guard: if no session → redirect to `/(auth)/landing`
+- Tab icons: Batches=layers, Students=people, Fees=attach-money, Attendance=check-circle, Tests=assignment
+- Colors: active tab icon = C.primary (#BB86FC), inactive = C.text2
+
+**Commits:**
+- feat: onboarding wizard with role selection and profile steps
 
 ### Agent 4 — OTP Verification Screen (2026-06-28)
 

@@ -15,6 +15,9 @@ import { AppButton } from '../../components/AppButton';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { StatusChip } from '../../components/StatusChip';
 import { Touchable } from '../../components/Touchable';
+import { SkeletonList } from '../../components/Skeleton';
+import { ErrorRetry } from '../../components/ErrorRetry';
+import { EmptyState } from '../../components/EmptyState';
 import C, { radius, withOpacity } from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 import { useAuth } from '../../context/AuthContext';
@@ -189,6 +192,7 @@ function HomeTab({
   upcomingEvents,
   loading,
   error,
+  onRetry,
 }: {
   profile: StudentProfile | null;
   attendance: AttendanceData | null;
@@ -196,26 +200,18 @@ function HomeTab({
   upcomingEvents: UpcomingEvent[];
   loading: boolean;
   error: string;
+  onRetry: () => void;
 }) {
   if (loading) {
     return (
-      <View style={styles.centeredLoader}>
-        <ActivityIndicator size="large" color={C.primary} />
+      <View style={styles.tabContent}>
+        <SkeletonList count={4} />
       </View>
     );
   }
 
   if (error) {
-    return (
-      <View style={styles.centeredLoader}>
-        <AppText variant="subheading" color={C.error} style={{ marginBottom: spacing.sm, textAlign: 'center' }}>
-          Could not load dashboard
-        </AppText>
-        <AppText variant="caption" color={C.text2} style={{ textAlign: 'center' }}>
-          {error}
-        </AppText>
-      </View>
-    );
+    return <ErrorRetry title="Could not load dashboard" message={error} onRetry={onRetry} />;
   }
 
   const attendancePct =
@@ -282,9 +278,7 @@ function HomeTab({
           Today's classes
         </AppText>
         {schedule.length === 0 ? (
-          <AppText variant="caption" color={C.text2}>
-            No classes scheduled today.
-          </AppText>
+          <EmptyState compact icon="📭" title="No classes scheduled today" message="Enjoy your day off." />
         ) : (
           schedule.map((s, idx) => (
             <AppCard key={String(s.id ?? idx)} style={styles.sessionCard}>
@@ -311,9 +305,7 @@ function HomeTab({
           Upcoming
         </AppText>
         {upcomingEvents.length === 0 ? (
-          <AppText variant="caption" color={C.text2}>
-            No upcoming classes found.
-          </AppText>
+          <EmptyState compact icon="🗓️" title="No upcoming classes" message="New sessions will show up here." />
         ) : (
           upcomingEvents.slice(0, 5).map((e, idx) => (
             <AppCard key={String(e.id ?? idx)} style={styles.sessionCard}>
@@ -451,9 +443,7 @@ function ScheduleTab({
           Today
         </AppText>
         {schedule.length === 0 ? (
-          <AppText variant="caption" color={C.text2}>
-            No classes today.
-          </AppText>
+          <EmptyState compact icon="📭" title="No classes today" message="Enjoy your day off." />
         ) : (
           schedule.map((s, idx) => (
             <AppCard key={String(s.id ?? idx)} style={styles.sessionCard}>
@@ -480,9 +470,7 @@ function ScheduleTab({
           Upcoming
         </AppText>
         {upcomingEvents.length === 0 ? (
-          <AppText variant="caption" color={C.text2}>
-            No upcoming classes.
-          </AppText>
+          <EmptyState compact icon="🗓️" title="No upcoming classes" message="New sessions will show up here." />
         ) : (
           upcomingEvents.map((e, idx) => (
             <AppCard key={String(e.id ?? idx)} style={styles.sessionCard}>
@@ -559,9 +547,9 @@ function FeesTab({
       {feeLoading ? (
         <ActivityIndicator color={C.primary} style={{ marginVertical: spacing.xl }} />
       ) : feeRecords.length === 0 ? (
-        <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.lg }}>
-          No fee records found for this month.
-        </AppText>
+        <View style={{ marginTop: spacing.lg }}>
+          <EmptyState compact icon="🧾" title="No fee records this month" message="Nothing due for the selected month." />
+        </View>
       ) : (
         <View style={{ gap: spacing.md }}>
           {feeRecords.map((record, idx) => {
@@ -860,6 +848,10 @@ export default function DashboardScreen() {
             upcomingEvents={upcomingEvents}
             loading={loading}
             error={error}
+            onRetry={() => {
+              setLoading(true);
+              loadAll();
+            }}
           />
         )}
         {activeTab === 'schedule' && (

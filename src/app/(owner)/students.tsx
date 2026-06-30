@@ -17,6 +17,8 @@ import { FilterChip } from '../../components/FilterChip';
 import { StatusChip } from '../../components/StatusChip';
 import { BottomSheetModal } from '../../components/BottomSheetModal';
 import { Touchable } from '../../components/Touchable';
+import { SkeletonList } from '../../components/Skeleton';
+import { ErrorRetry } from '../../components/ErrorRetry';
 import C from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 import { toastEmitter } from '../../lib/toastEmitter';
@@ -280,6 +282,8 @@ function EnrollmentRow({
 export default function StudentsScreen() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [enrollments, setEnrollments] = useState<EnrollmentRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<number | 'all'>('all');
   const [search, setSearch] = useState('');
@@ -308,8 +312,11 @@ export default function StudentsScreen() {
         })
       );
       setEnrollments(allEnrollments);
+      setError(false);
     } catch {
-      // silently ignore — user can pull-to-refresh
+      setError(true);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -319,6 +326,11 @@ export default function StudentsScreen() {
     setRefreshing(true);
     await load();
     setRefreshing(false);
+  };
+
+  const onRetry = () => {
+    setLoading(true);
+    load();
   };
 
   const handleRemove = async (id: number) => {
@@ -392,35 +404,41 @@ export default function StudentsScreen() {
         ))}
       </ScrollView>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={item => item.id.toString()}
-        renderItem={({ item, index }) => (
-          <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 40).springify().damping(18)}>
-            <EnrollmentRow item={item} onRemove={handleRemove} />
-          </Animated.View>
-        )}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={C.primary}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <AppText size={36}>👨‍🎓</AppText>
-            <AppText variant="subheading" style={{ marginTop: spacing.md }}>
-              No students yet
-            </AppText>
-            <AppText variant="body" color={C.text2} style={{ marginTop: spacing.xs }}>
-              {search ? 'No students match your search.' : 'Add students to your batches'}
-            </AppText>
-          </View>
-        }
-      />
+      {loading ? (
+        <SkeletonList count={5} />
+      ) : error && enrollments.length === 0 ? (
+        <ErrorRetry onRetry={onRetry} />
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={item => item.id.toString()}
+          renderItem={({ item, index }) => (
+            <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 40).springify().damping(18)}>
+              <EnrollmentRow item={item} onRemove={handleRemove} />
+            </Animated.View>
+          )}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={C.primary}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <AppText size={36}>👨‍🎓</AppText>
+              <AppText variant="subheading" style={{ marginTop: spacing.md }}>
+                No students yet
+              </AppText>
+              <AppText variant="body" color={C.text2} style={{ marginTop: spacing.xs }}>
+                {search ? 'No students match your search.' : 'Add students to your batches'}
+              </AppText>
+            </View>
+          }
+        />
+      )}
 
       <AddStudentModal
         visible={addVisible}

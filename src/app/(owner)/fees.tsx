@@ -18,6 +18,7 @@ import { FilterChip } from '../../components/FilterChip';
 import { StatusChip } from '../../components/StatusChip';
 import { BottomSheetModal } from '../../components/BottomSheetModal';
 import { Touchable } from '../../components/Touchable';
+import { SkeletonList } from '../../components/Skeleton';
 import C, { radius, withOpacity } from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 import { toastEmitter } from '../../lib/toastEmitter';
@@ -687,14 +688,8 @@ export default function FeesScreen() {
         </View>
       )}
 
-      {/* Records loading indicator */}
-      {recordsLoading && (
-        <ActivityIndicator
-          size="small"
-          color={C.primary}
-          style={{ marginVertical: 20 }}
-        />
-      )}
+      {/* Records loading skeleton */}
+      {recordsLoading && <SkeletonList count={3} />}
     </View>
   );
 

@@ -17,6 +17,8 @@ import { StatusChip } from '../../components/StatusChip';
 import { BottomSheetModal } from '../../components/BottomSheetModal';
 import { Touchable } from '../../components/Touchable';
 import { AnimatedProgressBar } from '../../components/AnimatedProgressBar';
+import { SkeletonList } from '../../components/Skeleton';
+import { ErrorRetry } from '../../components/ErrorRetry';
 import C from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 import { toastEmitter } from '../../lib/toastEmitter';
@@ -385,6 +387,8 @@ function BatchCard({
 
 export default function BatchesScreen() {
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [createVisible, setCreateVisible] = useState(false);
   const [addStudentBatch, setAddStudentBatch] = useState<Batch | null>(null);
@@ -393,8 +397,11 @@ export default function BatchesScreen() {
     try {
       const data = await getBatches();
       setBatches(Array.isArray(data) ? data : []);
+      setError(false);
     } catch {
-      // silently ignore — user can pull-to-refresh
+      setError(true);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -406,6 +413,11 @@ export default function BatchesScreen() {
     setRefreshing(true);
     await load();
     setRefreshing(false);
+  };
+
+  const onRetry = () => {
+    setLoading(true);
+    load();
   };
 
   return (
@@ -427,35 +439,41 @@ export default function BatchesScreen() {
         </Touchable>
       </View>
 
-      <FlatList
-        data={batches}
-        keyExtractor={item => item.id.toString()}
-        renderItem={({ item, index }) => (
-          <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify().damping(18)}>
-            <BatchCard batch={item} onAddStudent={b => setAddStudentBatch(b)} />
-          </Animated.View>
-        )}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={C.primary}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <AppText size={36}>📚</AppText>
-            <AppText variant="subheading" style={{ marginTop: spacing.md }}>
-              No batches yet
-            </AppText>
-            <AppText variant="body" color={C.text2} style={{ marginTop: spacing.xs }}>
-              Tap + to create your first batch
-            </AppText>
-          </View>
-        }
-      />
+      {loading ? (
+        <SkeletonList count={4} />
+      ) : error && batches.length === 0 ? (
+        <ErrorRetry onRetry={onRetry} />
+      ) : (
+        <FlatList
+          data={batches}
+          keyExtractor={item => item.id.toString()}
+          renderItem={({ item, index }) => (
+            <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify().damping(18)}>
+              <BatchCard batch={item} onAddStudent={b => setAddStudentBatch(b)} />
+            </Animated.View>
+          )}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={C.primary}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <AppText size={36}>📚</AppText>
+              <AppText variant="subheading" style={{ marginTop: spacing.md }}>
+                No batches yet
+              </AppText>
+              <AppText variant="body" color={C.text2} style={{ marginTop: spacing.xs }}>
+                Tap + to create your first batch
+              </AppText>
+            </View>
+          }
+        />
+      )}
 
       <CreateBatchModal
         visible={createVisible}

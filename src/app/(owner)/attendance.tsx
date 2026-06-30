@@ -19,6 +19,7 @@ import { FilterChip } from '../../components/FilterChip';
 import { StatusChip } from '../../components/StatusChip';
 import { BottomSheetModal } from '../../components/BottomSheetModal';
 import { Touchable } from '../../components/Touchable';
+import { SkeletonList } from '../../components/Skeleton';
 import C, { radius } from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 import { toastEmitter } from '../../lib/toastEmitter';
@@ -529,13 +530,7 @@ export default function AttendanceScreen() {
         </AppText>
       )}
 
-      {loading && (
-        <ActivityIndicator
-          size="small"
-          color={C.primary}
-          style={{ marginVertical: spacing.xxl }}
-        />
-      )}
+      {loading && <SkeletonList count={4} />}
     </View>
   );
 

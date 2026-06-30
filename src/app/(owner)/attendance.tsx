@@ -529,7 +529,7 @@ export default function AttendanceScreen() {
     <SafeAreaView style={styles.safe}>
       {/* Header */}
       <View style={styles.screenHeader}>
-        <View>
+        <View style={styles.headerText}>
           <AppText variant="heading">
             Attendance
           </AppText>
@@ -614,10 +614,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: spacing.md,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
   },
+  headerText: { flex: 1 },
   addBtn: {
     width: 36,
     height: 36,
@@ -626,6 +628,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
+    flexShrink: 0,
   },
 
   filterRow: { marginBottom: spacing.md, flexGrow: 0 },

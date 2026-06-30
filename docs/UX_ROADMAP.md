@@ -166,12 +166,22 @@ four features collapsed into a single manually-swipeable highlight strip — see
 ## Phase 4 — Navigation coherence (audit G6)
 *Goal: the student side behaves like the rest of the app and the platform.*
 
-- [ ] Move the student dashboard's hand-rolled `useState` tab bar onto real expo-router `Tabs`
-      (Home / Schedule / Fees / Profile), mirroring the owner layout. Enables deep-linking + back-stack.
-- [ ] Wire the **already-defined but unconnected** pull-to-refresh: the `onRefresh`/`refreshing` state
-      at `dashboard.tsx:776` is never passed to a `ScrollView` — attach a `RefreshControl`.
+- [x] Moved the student dashboard's hand-rolled `useState` tab bar onto real expo-router `Tabs`
+      (Home / Schedule / Fees / Profile), mirroring the owner layout. The monolithic
+      `(student)/dashboard.tsx` is split into four route screens; shared data (profile, attendance,
+      schedule, fees) is lifted into a `StudentDataProvider` in the layout so it still loads once and
+      is shared across tabs. Enables deep-linking + back-stack.
+- [x] Wired the **previously-orphaned** pull-to-refresh: a shared `StudentScreen` wrapper provides the
+      header + a `ScrollView` whose `RefreshControl` calls the context's `refresh()`, so every tab
+      pulls-to-refresh against the same load.
 
 **Phase 4 done when:** student tabs are router-driven and pull-to-refresh actually refreshes.
+
+✅ **Phase 4 complete (2026-07-01).** New pieces: `context/StudentDataContext`, `components/StudentScreen`,
+`lib/studentDashboard` (types + helpers) and `lib/studentDashboardStyles`. Route tree under `(student)`:
+`_layout` (Tabs + guard + provider) → `home` / `schedule` / `fees` / `profile`. The old
+`dashboard.tsx` and its custom bottom tab bar are removed; `index.tsx` now redirects students to
+`/(student)/home`. Verified with `tsc --noEmit` (clean) and an iOS production bundle export.
 
 ---
 

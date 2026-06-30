@@ -7,6 +7,7 @@ import { AppButton } from '../../components/AppButton';
 import { AppText } from '../../components/AppText';
 import { LogoMark } from '../../components/LogoMark';
 import C from '../../constants/colors';
+import { spacing } from '../../constants/spacing';
 import api from '../../services/api';
 
 export default function OwnerSetupScreen() {
@@ -46,8 +47,8 @@ export default function OwnerSetupScreen() {
         <View style={styles.container}>
           <View style={styles.header}>
             <LogoMark size={48} />
-            <AppText size={26} weight="700" style={styles.title}>Set up your institute</AppText>
-            <AppText size={14} color={C.text2} style={styles.subtitle}>
+            <AppText variant="title" style={styles.title}>Set up your institute</AppText>
+            <AppText variant="body" color={C.text2} style={styles.subtitle}>
               This is how students and parents will recognise you
             </AppText>
           </View>
@@ -72,7 +73,7 @@ export default function OwnerSetupScreen() {
               onPress={handleSubmit}
               loading={loading}
               disabled={!name.trim()}
-              style={{ marginTop: 8 }}
+              style={{ marginTop: spacing.sm }}
             />
           </View>
         </View>
@@ -84,9 +85,9 @@ export default function OwnerSetupScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
   kav: { flex: 1 },
-  container: { flex: 1, paddingHorizontal: 24, paddingTop: 16 },
-  header: { alignItems: 'center', gap: 12, marginTop: 32, marginBottom: 40 },
+  container: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.lg },
+  header: { alignItems: 'center', gap: spacing.md, marginTop: spacing.xxl, marginBottom: spacing.xxxl },
   title: { letterSpacing: -0.5, textAlign: 'center' },
   subtitle: { textAlign: 'center', lineHeight: 20 },
-  form: { gap: 20 },
+  form: { gap: spacing.xl },
 });

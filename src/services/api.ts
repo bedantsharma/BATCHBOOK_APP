@@ -16,14 +16,37 @@ const api = axios.create({
   },
 });
 
+// Cache the access token in memory so the request interceptor doesn't have to
+// hit AsyncStorage / acquire the Supabase auth lock on every call. Without this,
+// bursts of parallel requests (e.g. the dashboard's Promise.all) serialize on
+// that lock. Supabase fires onAuthStateChange on INITIAL_SESSION, SIGNED_IN,
+// TOKEN_REFRESHED and SIGNED_OUT, so the cache stays fresh across refreshes.
+let cachedToken: string | null = null;
+let cachedExpiresAt = 0; // unix seconds
+
+supabase.auth.onAuthStateChange((_event, session) => {
+  cachedToken = session?.access_token ?? null;
+  cachedExpiresAt = session?.expires_at ?? 0;
+});
+
 // Attach Supabase JWT to every outgoing request
 api.interceptors.request.use(async (config) => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const now = Math.floor(Date.now() / 1000);
 
-  if (session?.access_token) {
-    config.headers.Authorization = `Bearer ${session.access_token}`;
+  // Fast path: use the in-memory token. Fall back to getSession() — which
+  // auto-refreshes — only when we have no token or it's within 60s of expiry.
+  let token = cachedToken;
+  if (!token || now >= cachedExpiresAt - 60) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    token = session?.access_token ?? null;
+    cachedToken = token;
+    cachedExpiresAt = session?.expires_at ?? 0;
+  }
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });

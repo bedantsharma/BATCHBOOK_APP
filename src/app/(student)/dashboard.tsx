@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   ScrollView,
-  Pressable,
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
@@ -14,10 +13,14 @@ import { AppText } from '../../components/AppText';
 import { AppCard } from '../../components/AppCard';
 import { AppButton } from '../../components/AppButton';
 import { LoadingScreen } from '../../components/LoadingScreen';
-import C, { radius } from '../../constants/colors';
+import { StatusChip } from '../../components/StatusChip';
+import { Touchable } from '../../components/Touchable';
+import C, { radius, withOpacity } from '../../constants/colors';
+import { spacing } from '../../constants/spacing';
 import { useAuth } from '../../context/AuthContext';
 import {
-  getStudentProfile,
+  getParentMe,
+  buildStudentProfile,
   getAttendance,
   getTodaySchedule,
   getUpcomingEvents,
@@ -147,11 +150,15 @@ function BottomTabBar({
       {TABS.map(tab => {
         const active = activeTab === tab.key;
         return (
-          <Pressable
+          <Touchable
             key={tab.key}
+            haptic
             onPress={() => onTabChange(tab.key)}
             style={styles.tabItem}
             hitSlop={4}
+            accessibilityRole="button"
+            accessibilityLabel={tab.label}
+            accessibilityState={{ selected: active }}
           >
             <MaterialIcons
               name={tab.icon as React.ComponentProps<typeof MaterialIcons>['name']}
@@ -159,14 +166,14 @@ function BottomTabBar({
               color={active ? C.primary : C.text2}
             />
             <AppText
-              size={10}
+              variant="micro"
               weight={active ? '600' : '400'}
               color={active ? C.primary : C.text2}
               style={{ marginTop: 3 }}
             >
               {tab.label}
             </AppText>
-          </Pressable>
+          </Touchable>
         );
       })}
     </View>
@@ -201,10 +208,10 @@ function HomeTab({
   if (error) {
     return (
       <View style={styles.centeredLoader}>
-        <AppText size={16} color={C.error} style={{ marginBottom: 8, textAlign: 'center' }}>
+        <AppText variant="subheading" color={C.error} style={{ marginBottom: spacing.sm, textAlign: 'center' }}>
           Could not load dashboard
         </AppText>
-        <AppText size={13} color={C.text2} style={{ textAlign: 'center' }}>
+        <AppText variant="caption" color={C.text2} style={{ textAlign: 'center' }}>
           {error}
         </AppText>
       </View>
@@ -224,11 +231,11 @@ function HomeTab({
       showsVerticalScrollIndicator={false}
     >
       {/* Greeting */}
-      <View style={{ marginBottom: 20 }}>
-        <AppText size={22} weight="700">
+      <View style={{ marginBottom: spacing.xl }}>
+        <AppText variant="heading">
           Hello, {profile?.name ?? 'Student'} 👋
         </AppText>
-        <AppText size={13} color={C.text2} style={{ marginTop: 4 }}>
+        <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.xs }}>
           {attendance?.month ?? ''}
         </AppText>
       </View>
@@ -237,19 +244,19 @@ function HomeTab({
       {profile?.feeDue ? (
         <View style={styles.feeBanner}>
           <View style={{ flex: 1 }}>
-            <AppText size={14} weight="600" color={C.error}>
+            <AppText variant="body" weight="600" color={C.error}>
               Fee Due
             </AppText>
-            <AppText size={12} color={C.text2} style={{ marginTop: 2 }}>
+            <AppText variant="caption" color={C.text2} style={{ marginTop: 2 }}>
               You have an outstanding fee for this month.
             </AppText>
           </View>
           {profile.paymentLink ? (
-            <AppText size={12} color={C.error} weight="600">
+            <AppText variant="caption" color={C.error} weight="600">
               Pay Now
             </AppText>
           ) : (
-            <AppText size={12} color={C.text2}>
+            <AppText variant="caption" color={C.text2}>
               Contact institute
             </AppText>
           )}
@@ -258,39 +265,39 @@ function HomeTab({
 
       {/* Attendance Summary Card */}
       <AppCard style={styles.summaryCard}>
-        <AppText size={11} color={C.text2} weight="600" style={styles.sectionLabel}>
+        <AppText variant="micro" color={C.text2} weight="600" style={styles.sectionLabel}>
           ATTENDANCE THIS MONTH
         </AppText>
-        <AppText size={40} weight="800" color={pctColor}>
+        <AppText variant="hero" color={pctColor}>
           {attendancePct}%
         </AppText>
-        <AppText size={13} color={C.text2} style={{ marginTop: 4 }}>
+        <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.xs }}>
           {attendance?.present ?? 0} present out of {attendance?.total ?? 0} sessions
         </AppText>
       </AppCard>
 
       {/* Today's Classes */}
-      <View style={{ marginBottom: 20 }}>
-        <AppText size={15} weight="700" style={{ marginBottom: 12 }}>
+      <View style={{ marginBottom: spacing.xl }}>
+        <AppText variant="subheading" style={{ marginBottom: spacing.md }}>
           Today's classes
         </AppText>
         {schedule.length === 0 ? (
-          <AppText size={13} color={C.text2}>
+          <AppText variant="caption" color={C.text2}>
             No classes scheduled today.
           </AppText>
         ) : (
           schedule.map((s, idx) => (
             <AppCard key={String(s.id ?? idx)} style={styles.sessionCard}>
               <View style={{ flex: 1 }}>
-                <AppText size={14} weight="600">
+                <AppText variant="body" weight="600">
                   {s.subject}
                 </AppText>
-                <AppText size={12} color={C.text2} style={{ marginTop: 2 }}>
+                <AppText variant="caption" color={C.text2} style={{ marginTop: 2 }}>
                   {s.batchName}
                   {s.topic ? ` · ${s.topic}` : ''}
                 </AppText>
               </View>
-              <AppText size={12} color={C.text2}>
+              <AppText variant="caption" color={C.text2}>
                 {s.time}
               </AppText>
             </AppCard>
@@ -299,30 +306,30 @@ function HomeTab({
       </View>
 
       {/* Upcoming Events */}
-      <View style={{ marginBottom: 20 }}>
-        <AppText size={15} weight="700" style={{ marginBottom: 12 }}>
+      <View style={{ marginBottom: spacing.xl }}>
+        <AppText variant="subheading" style={{ marginBottom: spacing.md }}>
           Upcoming
         </AppText>
         {upcomingEvents.length === 0 ? (
-          <AppText size={13} color={C.text2}>
+          <AppText variant="caption" color={C.text2}>
             No upcoming classes found.
           </AppText>
         ) : (
           upcomingEvents.slice(0, 5).map((e, idx) => (
             <AppCard key={String(e.id ?? idx)} style={styles.sessionCard}>
               <View style={{ flex: 1 }}>
-                <AppText size={14} weight="600">
+                <AppText variant="body" weight="600">
                   {e.label}
                 </AppText>
-                <AppText size={12} color={C.text2} style={{ marginTop: 2 }}>
+                <AppText variant="caption" color={C.text2} style={{ marginTop: 2 }}>
                   {e.sub}
                 </AppText>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <AppText size={12} color={C.primary} weight="600">
+                <AppText variant="caption" color={C.primary} weight="600">
                   {e.day}
                 </AppText>
-                <AppText size={11} color={C.text2}>
+                <AppText variant="micro" color={C.text2}>
                   {e.time}
                 </AppText>
               </View>
@@ -365,49 +372,49 @@ function ScheduleTab({
       contentContainerStyle={styles.tabContent}
       showsVerticalScrollIndicator={false}
     >
-      <AppText size={20} weight="700" style={{ marginBottom: 16 }}>
+      <AppText variant="heading" style={{ marginBottom: spacing.lg }}>
         Schedule & Attendance
       </AppText>
 
       {/* Month picker */}
       <View style={styles.monthPicker}>
-        <Pressable onPress={() => {
+        <Touchable onPress={() => {
           const m = prevMonth(attendanceMonth);
           setAttendanceMonth(m);
           onRefreshAttendance(m);
-        }} hitSlop={8}>
+        }} hitSlop={8} accessibilityRole="button" accessibilityLabel="Previous month">
           <MaterialIcons name="chevron-left" size={24} color={C.text} />
-        </Pressable>
-        <AppText size={14} weight="600">
+        </Touchable>
+        <AppText variant="body" weight="600">
           {formatMonthLabel(attendanceMonth)}
         </AppText>
-        <Pressable onPress={() => {
+        <Touchable onPress={() => {
           const m = nextMonth(attendanceMonth);
           setAttendanceMonth(m);
           onRefreshAttendance(m);
-        }} hitSlop={8}>
+        }} hitSlop={8} accessibilityRole="button" accessibilityLabel="Next month">
           <MaterialIcons name="chevron-right" size={24} color={C.text} />
-        </Pressable>
+        </Touchable>
       </View>
 
       {/* Attendance summary */}
       {attendanceLoading ? (
-        <ActivityIndicator color={C.primary} style={{ marginVertical: 24 }} />
+        <ActivityIndicator color={C.primary} style={{ marginVertical: spacing.xl }} />
       ) : (
         <AppCard style={styles.summaryCard}>
-          <AppText size={11} color={C.text2} weight="600" style={styles.sectionLabel}>
+          <AppText variant="micro" color={C.text2} weight="600" style={styles.sectionLabel}>
             ATTENDANCE — {formatMonthLabel(attendanceMonth).toUpperCase()}
           </AppText>
-          <AppText size={40} weight="800" color={pctColor}>
+          <AppText variant="hero" color={pctColor}>
             {attendancePct}%
           </AppText>
-          <AppText size={13} color={C.text2} style={{ marginTop: 4 }}>
+          <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.xs }}>
             {attendance?.present ?? 0} present · {attendance?.total ?? 0} sessions
           </AppText>
 
           {/* Per-batch attendance breakdown */}
           {attendance && attendance.items.length > 0 ? (
-            <View style={{ marginTop: 16, gap: 8 }}>
+            <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
               {attendance.items.map((item, idx) => {
                 const batchPct =
                   item.total > 0 ? Math.round((item.present / item.total) * 100) : 0;
@@ -415,18 +422,18 @@ function ScheduleTab({
                 return (
                   <View key={idx} style={styles.batchRow}>
                     <View style={{ flex: 1 }}>
-                      <AppText size={13} weight="600">
+                      <AppText variant="caption" weight="600">
                         {item.batch_name}
                       </AppText>
-                      <AppText size={11} color={C.text2}>
+                      <AppText variant="micro" color={C.text2}>
                         {item.subject}
                       </AppText>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
-                      <AppText size={14} weight="700" color={bColor}>
+                      <AppText variant="body" weight="700" color={bColor}>
                         {batchPct}%
                       </AppText>
-                      <AppText size={11} color={C.text2}>
+                      <AppText variant="micro" color={C.text2}>
                         {item.present}/{item.total}
                       </AppText>
                     </View>
@@ -439,27 +446,27 @@ function ScheduleTab({
       )}
 
       {/* Today's schedule */}
-      <View style={{ marginBottom: 20 }}>
-        <AppText size={15} weight="700" style={{ marginBottom: 12 }}>
+      <View style={{ marginBottom: spacing.xl }}>
+        <AppText variant="subheading" style={{ marginBottom: spacing.md }}>
           Today
         </AppText>
         {schedule.length === 0 ? (
-          <AppText size={13} color={C.text2}>
+          <AppText variant="caption" color={C.text2}>
             No classes today.
           </AppText>
         ) : (
           schedule.map((s, idx) => (
             <AppCard key={String(s.id ?? idx)} style={styles.sessionCard}>
               <View style={{ flex: 1 }}>
-                <AppText size={14} weight="600">
+                <AppText variant="body" weight="600">
                   {s.subject}
                 </AppText>
-                <AppText size={12} color={C.text2} style={{ marginTop: 2 }}>
+                <AppText variant="caption" color={C.text2} style={{ marginTop: 2 }}>
                   {s.batchName}
                   {s.topic ? ` · ${s.topic}` : ''}
                 </AppText>
               </View>
-              <AppText size={12} color={C.text2}>
+              <AppText variant="caption" color={C.text2}>
                 {s.time}
               </AppText>
             </AppCard>
@@ -468,30 +475,30 @@ function ScheduleTab({
       </View>
 
       {/* Upcoming */}
-      <View style={{ marginBottom: 20 }}>
-        <AppText size={15} weight="700" style={{ marginBottom: 12 }}>
+      <View style={{ marginBottom: spacing.xl }}>
+        <AppText variant="subheading" style={{ marginBottom: spacing.md }}>
           Upcoming
         </AppText>
         {upcomingEvents.length === 0 ? (
-          <AppText size={13} color={C.text2}>
+          <AppText variant="caption" color={C.text2}>
             No upcoming classes.
           </AppText>
         ) : (
           upcomingEvents.map((e, idx) => (
             <AppCard key={String(e.id ?? idx)} style={styles.sessionCard}>
               <View style={{ flex: 1 }}>
-                <AppText size={14} weight="600">
+                <AppText variant="body" weight="600">
                   {e.label}
                 </AppText>
-                <AppText size={12} color={C.text2} style={{ marginTop: 2 }}>
+                <AppText variant="caption" color={C.text2} style={{ marginTop: 2 }}>
                   {e.sub}
                 </AppText>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <AppText size={12} color={C.primary} weight="600">
+                <AppText variant="caption" color={C.primary} weight="600">
                   {e.day}
                 </AppText>
-                <AppText size={11} color={C.text2}>
+                <AppText variant="micro" color={C.text2}>
                   {e.time}
                 </AppText>
               </View>
@@ -524,39 +531,39 @@ function FeesTab({
       contentContainerStyle={styles.tabContent}
       showsVerticalScrollIndicator={false}
     >
-      <AppText size={20} weight="700" style={{ marginBottom: 16 }}>
+      <AppText variant="heading" style={{ marginBottom: spacing.lg }}>
         Fee Status
       </AppText>
 
       {/* Month picker */}
       <View style={styles.monthPicker}>
-        <Pressable onPress={() => {
+        <Touchable onPress={() => {
           const m = prevMonth(feeMonth);
           setFeeMonth(m);
           onRefreshFees(m);
-        }} hitSlop={8}>
+        }} hitSlop={8} accessibilityRole="button" accessibilityLabel="Previous month">
           <MaterialIcons name="chevron-left" size={24} color={C.text} />
-        </Pressable>
-        <AppText size={14} weight="600">
+        </Touchable>
+        <AppText variant="body" weight="600">
           {formatMonthLabel(feeMonth)}
         </AppText>
-        <Pressable onPress={() => {
+        <Touchable onPress={() => {
           const m = nextMonth(feeMonth);
           setFeeMonth(m);
           onRefreshFees(m);
-        }} hitSlop={8}>
+        }} hitSlop={8} accessibilityRole="button" accessibilityLabel="Next month">
           <MaterialIcons name="chevron-right" size={24} color={C.text} />
-        </Pressable>
+        </Touchable>
       </View>
 
       {feeLoading ? (
-        <ActivityIndicator color={C.primary} style={{ marginVertical: 24 }} />
+        <ActivityIndicator color={C.primary} style={{ marginVertical: spacing.xl }} />
       ) : feeRecords.length === 0 ? (
-        <AppText size={13} color={C.text2} style={{ marginTop: 16 }}>
+        <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.lg }}>
           No fee records found for this month.
         </AppText>
       ) : (
-        <View style={{ gap: 12 }}>
+        <View style={{ gap: spacing.md }}>
           {feeRecords.map((record, idx) => {
             const statusColor = feeStatusColor(record.status);
             const statusText = feeStatusLabel(record.status);
@@ -567,36 +574,32 @@ function FeesTab({
               record.status === 'PARTIAL';
 
             return (
-              <AppCard key={idx} style={{ gap: 8 }}>
+              <AppCard key={idx} style={{ gap: spacing.sm }}>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
                   <View style={{ flex: 1 }}>
-                    <AppText size={15} weight="600">
+                    <AppText variant="subheading">
                       {record.batch_name ?? 'Fee Record'}
                     </AppText>
-                    <AppText size={12} color={C.text2} style={{ marginTop: 3 }}>
+                    <AppText variant="caption" color={C.text2} style={{ marginTop: 3 }}>
                       Due: ₹{record.amount_due ?? 0}
                     </AppText>
                     {(record.amount_paid ?? 0) > 0 ? (
-                      <AppText size={12} color={C.text2}>
+                      <AppText variant="caption" color={C.text2}>
                         Paid: ₹{record.amount_paid}
                       </AppText>
                     ) : null}
                   </View>
                   {/* Status chip */}
-                  <View
-                    style={[
-                      styles.statusChip,
-                      { backgroundColor: statusColor + '22' },
-                    ]}
-                  >
-                    <AppText size={12} weight="700" color={statusColor}>
-                      {statusText}
-                    </AppText>
-                  </View>
+                  <StatusChip
+                    label={statusText}
+                    color={statusColor}
+                    variant="caption"
+                    style={styles.statusChip}
+                  />
                 </View>
 
                 {isUnpaid ? (
-                  <AppText size={12} color={C.text2}>
+                  <AppText variant="caption" color={C.text2}>
                     {record.payment_link
                       ? 'Payment link available — contact your institute.'
                       : 'Contact your institute to pay.'}
@@ -636,23 +639,23 @@ function ProfileTab({
       contentContainerStyle={styles.tabContent}
       showsVerticalScrollIndicator={false}
     >
-      <AppText size={20} weight="700" style={{ marginBottom: 20 }}>
+      <AppText variant="heading" style={{ marginBottom: spacing.xl }}>
         Profile
       </AppText>
 
       {/* Avatar + Name */}
       <View style={styles.avatarRow}>
         <View style={styles.avatar}>
-          <AppText size={22} weight="700" color={C.bg}>
+          <AppText variant="heading" color={C.onPrimary}>
             {profile?.initials ?? '?'}
           </AppText>
         </View>
         <View style={{ flex: 1 }}>
-          <AppText size={18} weight="700">
+          <AppText variant="heading">
             {profile?.name ?? 'Student'}
           </AppText>
           {profile?.batch ? (
-            <AppText size={13} color={C.text2} style={{ marginTop: 2 }}>
+            <AppText variant="caption" color={C.text2} style={{ marginTop: 2 }}>
               {profile.batch}
             </AppText>
           ) : null}
@@ -660,11 +663,11 @@ function ProfileTab({
       </View>
 
       {/* Info cards */}
-      <AppCard style={{ gap: 14, marginBottom: 12 }}>
+      <AppCard style={{ gap: spacing.lg, marginBottom: spacing.md }}>
         {profile?.phone ? (
           <View style={styles.infoRow}>
             <MaterialIcons name="phone" size={18} color={C.text2} />
-            <AppText size={14} color={C.text2}>
+            <AppText variant="body" color={C.text2}>
               {profile.phone}
             </AppText>
           </View>
@@ -673,7 +676,7 @@ function ProfileTab({
         {profile?.subjects && profile.subjects.length > 0 ? (
           <View style={styles.infoRow}>
             <MaterialIcons name="school" size={18} color={C.text2} />
-            <AppText size={14} color={C.text2}>
+            <AppText variant="body" color={C.text2}>
               {profile.subjects.join(', ')}
             </AppText>
           </View>
@@ -682,7 +685,7 @@ function ProfileTab({
         {profile?.enrolledYear ? (
           <View style={styles.infoRow}>
             <MaterialIcons name="calendar-today" size={18} color={C.text2} />
-            <AppText size={14} color={C.text2}>
+            <AppText variant="body" color={C.text2}>
               Enrolled {profile.enrolledYear}
             </AppText>
           </View>
@@ -694,7 +697,7 @@ function ProfileTab({
         label="Sign Out"
         onPress={onSignOut}
         variant="secondary"
-        style={{ marginTop: 8 }}
+        style={{ marginTop: spacing.sm }}
       />
     </ScrollView>
   );
@@ -743,18 +746,20 @@ export default function DashboardScreen() {
   const loadAll = useCallback(async () => {
     setError('');
     try {
-      const [p, a, s, u, f] = await Promise.all([
-        getStudentProfile(),
+      const [parent, a, s, u, f] = await Promise.all([
+        getParentMe(),
         getAttendance(attendanceMonth),
         getTodaySchedule(),
         getUpcomingEvents(5),
         getFeeStatus(feeMonth),
       ]);
+      const fees = (f as FeeRecord[]) ?? [];
+      const p = await buildStudentProfile(parent, a.items, fees);
       setProfile(p as StudentProfile);
       setAttendance(a);
       setSchedule(s as ScheduleItem[]);
       setUpcomingEvents(u as UpcomingEvent[]);
-      setFeeRecords((f as FeeRecord[]) ?? []);
+      setFeeRecords(fees);
     } catch (err: unknown) {
       const e = err as Error;
       setError(e.message ?? 'Failed to load dashboard data.');
@@ -773,18 +778,20 @@ export default function DashboardScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      const [p, a, s, u, f] = await Promise.all([
-        getStudentProfile(),
+      const [parent, a, s, u, f] = await Promise.all([
+        getParentMe(),
         getAttendance(attendanceMonth),
         getTodaySchedule(),
         getUpcomingEvents(5),
         getFeeStatus(feeMonth),
       ]);
+      const fees = (f as FeeRecord[]) ?? [];
+      const p = await buildStudentProfile(parent, a.items, fees);
       setProfile(p as StudentProfile);
       setAttendance(a);
       setSchedule(s as ScheduleItem[]);
       setUpcomingEvents(u as UpcomingEvent[]);
-      setFeeRecords((f as FeeRecord[]) ?? []);
+      setFeeRecords(fees);
       setError('');
     } catch {
       // ignore — keep stale data
@@ -835,10 +842,10 @@ export default function DashboardScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Screen header */}
       <View style={styles.screenHeader}>
-        <AppText size={16} weight="700">
+        <AppText variant="subheading">
           BatchBook
         </AppText>
-        <AppText size={11} color={C.text2}>
+        <AppText variant="micro" color={C.text2}>
           Student
         </AppText>
       </View>
@@ -898,9 +905,9 @@ const styles = StyleSheet.create({
   screenHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: C.outline,
     backgroundColor: C.bg,
@@ -911,8 +918,8 @@ const styles = StyleSheet.create({
   },
 
   tabContent: {
-    padding: 20,
-    paddingBottom: 32,
+    padding: spacing.xl,
+    paddingBottom: spacing.xxl,
   },
 
   // ── Bottom tab bar ─────────────────────────────────────────────────────────
@@ -940,35 +947,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: C.surface2,
     borderRadius: radius.md,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     paddingVertical: 10,
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
 
   // ── Cards ──────────────────────────────────────────────────────────────────
   summaryCard: {
-    marginBottom: 24,
-    gap: 4,
+    marginBottom: spacing.xl,
+    gap: spacing.xs,
   },
   sessionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   batchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: C.outline,
   },
 
   // ── Fee status chip ────────────────────────────────────────────────────────
   statusChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.lg,
     marginLeft: 10,
   },
 
@@ -976,8 +980,8 @@ const styles = StyleSheet.create({
   avatarRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    marginBottom: 20,
+    gap: spacing.lg,
+    marginBottom: spacing.xl,
   },
   avatar: {
     width: 56,
@@ -990,31 +994,31 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.sm,
   },
 
   // ── Fee due banner ─────────────────────────────────────────────────────────
   feeBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    backgroundColor: C.error + '1E',
+    gap: spacing.md,
+    backgroundColor: withOpacity(C.error),
     borderWidth: 1,
-    borderColor: C.error + '4D',
+    borderColor: withOpacity(C.error, 'strong'),
     borderRadius: radius.md,
     padding: 14,
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
 
   // ── Loading ────────────────────────────────────────────────────────────────
   sectionLabel: {
     letterSpacing: 0.8,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   centeredLoader: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 32,
+    padding: spacing.xxl,
   },
 });

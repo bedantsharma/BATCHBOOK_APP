@@ -7,6 +7,7 @@ import { AppButton } from '../../components/AppButton';
 import { AppCard } from '../../components/AppCard';
 import { AppText } from '../../components/AppText';
 import C, { radius } from '../../constants/colors';
+import { spacing } from '../../constants/spacing';
 
 const FEATURES = [
   { icon: '📚', title: 'Batch Management', desc: 'Organise students into batches with custom schedules' },
@@ -24,8 +25,8 @@ export default function LandingScreen() {
         {/* Hero */}
         <View style={styles.hero}>
           <LogoMark size={64} />
-          <AppText size={32} weight="700" style={styles.appName}>BatchBook</AppText>
-          <AppText size={16} color={C.text2} style={styles.tagline}>
+          <AppText variant="display" style={styles.appName}>BatchBook</AppText>
+          <AppText variant="subheading" weight="400" color={C.text2} style={styles.tagline}>
             The smart way to manage your tuition classes
           </AppText>
         </View>
@@ -36,8 +37,8 @@ export default function LandingScreen() {
             <AppCard key={f.title} style={styles.featureCard}>
               <Text style={styles.featureIcon}>{f.icon}</Text>
               <View style={styles.featureText}>
-                <AppText size={15} weight="600">{f.title}</AppText>
-                <AppText size={13} color={C.text2} style={{ marginTop: 2 }}>{f.desc}</AppText>
+                <AppText variant="subheading">{f.title}</AppText>
+                <AppText variant="caption" color={C.text2} style={{ marginTop: 2 }}>{f.desc}</AppText>
               </View>
             </AppCard>
           ))}
@@ -53,14 +54,14 @@ export default function LandingScreen() {
           />
           <AppButton
             label="I'm a Student"
-            onPress={() => router.push('/(auth)/onboarding' as any)}
+            onPress={() => router.push({ pathname: '/(auth)/onboarding', params: { role: 'student' } } as any)}
             variant="secondary"
             style={styles.ctaBtn}
           />
         </View>
 
         {/* Footer */}
-        <AppText size={12} color={C.text3} style={styles.footer}>
+        <AppText variant="caption" color={C.text3} style={styles.footer}>
           By continuing you agree to our Privacy Policy
         </AppText>
       </ScrollView>
@@ -70,15 +71,15 @@ export default function LandingScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
-  scroll: { paddingHorizontal: 20, paddingBottom: 32 },
-  hero: { alignItems: 'center', paddingTop: 48, paddingBottom: 32, gap: 12 },
+  scroll: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl },
+  hero: { alignItems: 'center', paddingTop: 48, paddingBottom: spacing.xxl, gap: spacing.md },
   appName: { letterSpacing: -0.5 },
   tagline: { textAlign: 'center', lineHeight: 22, maxWidth: 280 },
-  features: { gap: 12, marginBottom: 32 },
+  features: { gap: spacing.md, marginBottom: spacing.xxl },
   featureCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
   featureIcon: { fontSize: 24, marginTop: 2 },
   featureText: { flex: 1 },
-  ctas: { gap: 12, marginBottom: 24 },
+  ctas: { gap: spacing.md, marginBottom: spacing.xl },
   ctaBtn: { width: '100%' },
-  footer: { textAlign: 'center', marginTop: 8 },
+  footer: { textAlign: 'center', marginTop: spacing.sm },
 });

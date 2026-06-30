@@ -3,21 +3,26 @@ import {
   View,
   FlatList,
   StyleSheet,
-  Pressable,
-  Modal,
   ScrollView,
   Alert,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText } from '../../components/AppText';
 import { AppCard } from '../../components/AppCard';
 import { AppButton } from '../../components/AppButton';
 import { AppInput } from '../../components/AppInput';
+import { FilterChip } from '../../components/FilterChip';
+import { StatusChip } from '../../components/StatusChip';
+import { BottomSheetModal } from '../../components/BottomSheetModal';
+import { Touchable } from '../../components/Touchable';
 import C, { radius } from '../../constants/colors';
+import { spacing } from '../../constants/spacing';
 import { toastEmitter } from '../../lib/toastEmitter';
+import { haptics } from '../../lib/haptics';
 import {
   getBatches,
   getEnrollmentsByBatch,
@@ -87,6 +92,7 @@ function AttendanceSheet({ sessionId, enrollments, attendance, onSaved }: Attend
   const [saving, setSaving] = useState(false);
 
   function toggle(enrollmentId: number) {
+    haptics.toggle();
     setPresentIds(prev => {
       const next = new Set(prev);
       if (next.has(enrollmentId)) {
@@ -126,22 +132,14 @@ function AttendanceSheet({ sessionId, enrollments, attendance, onSaved }: Attend
       {/* Summary row + Mark All shortcut */}
       <View style={styles.sheetHeader}>
         <View style={styles.countRow}>
-          <View style={[styles.countChip, { backgroundColor: C.success + '22' }]}>
-            <AppText size={12} weight="600" color={C.success}>
-              {presentCount} Present
-            </AppText>
-          </View>
-          <View style={[styles.countChip, { backgroundColor: C.error + '22' }]}>
-            <AppText size={12} weight="600" color={C.error}>
-              {absentCount} Absent
-            </AppText>
-          </View>
+          <StatusChip label={`${presentCount} Present`} color={C.success} variant="caption" />
+          <StatusChip label={`${absentCount} Absent`} color={C.error} variant="caption" />
         </View>
-        <Pressable onPress={markAllPresent} hitSlop={8}>
-          <AppText size={12} color={C.primary} weight="600">
+        <Touchable haptic onPress={markAllPresent} hitSlop={8} accessibilityRole="button">
+          <AppText variant="caption" color={C.primary} weight="600">
             Mark All Present
           </AppText>
-        </Pressable>
+        </Touchable>
       </View>
 
       <View style={styles.sheetDivider} />
@@ -149,20 +147,22 @@ function AttendanceSheet({ sessionId, enrollments, attendance, onSaved }: Attend
       {/* Student rows — one per enrollment */}
       {enrollments.length === 0 ? (
         <AppText
-          size={14}
+          variant="body"
           color={C.text3}
-          style={{ textAlign: 'center', paddingVertical: 20 }}
+          style={{ textAlign: 'center', paddingVertical: spacing.lg }}
         >
           No active enrollments in this batch.
         </AppText>
       ) : (
-        <View style={{ gap: 8, marginBottom: 16 }}>
+        <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
           {enrollments.map(enrollment => {
             const isPresent = presentIds.has(enrollment.id);
             return (
-              <Pressable
+              <Touchable
                 key={enrollment.id}
                 onPress={() => toggle(enrollment.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`${enrollment.student_name ?? `Student ${enrollment.student_id}`}, ${isPresent ? 'present' : 'absent'}`}
                 style={[
                   styles.studentRow,
                   {
@@ -175,7 +175,7 @@ function AttendanceSheet({ sessionId, enrollments, attendance, onSaved }: Attend
                   },
                 ]}
               >
-                <AppText size={14} style={{ flex: 1 }}>
+                <AppText variant="body" style={{ flex: 1 }}>
                   {enrollment.student_name ?? `Student #${enrollment.student_id}`}
                 </AppText>
                 <View style={styles.studentStatus}>
@@ -185,7 +185,7 @@ function AttendanceSheet({ sessionId, enrollments, attendance, onSaved }: Attend
                     color={isPresent ? C.success : C.error}
                   />
                   <AppText
-                    size={12}
+                    variant="caption"
                     weight="600"
                     color={isPresent ? C.success : C.error}
                     style={{ minWidth: 52 }}
@@ -193,7 +193,7 @@ function AttendanceSheet({ sessionId, enrollments, attendance, onSaved }: Attend
                     {isPresent ? 'PRESENT' : 'ABSENT'}
                   </AppText>
                 </View>
-              </Pressable>
+              </Touchable>
             );
           })}
         </View>
@@ -246,13 +246,13 @@ function SessionCard({ session, enrollments }: SessionCardProps) {
   return (
     <AppCard style={styles.sessionCard}>
       {/* Tappable header: date, topic, summary chip, expand icon */}
-      <Pressable onPress={handleExpand} style={styles.sessionHeader}>
+      <Touchable onPress={handleExpand} style={styles.sessionHeader} accessibilityRole="button">
         <View style={{ flex: 1 }}>
-          <AppText size={14} weight="600">
+          <AppText variant="body" weight="600">
             {formatDate(session.date)}
           </AppText>
           {session.topic ? (
-            <AppText size={12} color={C.text2} style={{ marginTop: 2 }}>
+            <AppText variant="caption" color={C.text2} style={{ marginTop: 2 }}>
               {session.topic}
             </AppText>
           ) : null}
@@ -261,27 +261,10 @@ function SessionCard({ session, enrollments }: SessionCardProps) {
           {attendance !== null &&
           presentCount !== null &&
           totalCount !== null ? (
-            <View
-              style={[
-                styles.summaryChip,
-                {
-                  backgroundColor:
-                    presentCount === totalCount
-                      ? 'rgba(76,175,80,0.15)'
-                      : 'rgba(251,140,0,0.15)',
-                },
-              ]}
-            >
-              <AppText
-                size={11}
-                weight="600"
-                color={
-                  presentCount === totalCount ? C.success : C.warning
-                }
-              >
-                {presentCount}/{totalCount} present
-              </AppText>
-            </View>
+            <StatusChip
+              label={`${presentCount}/${totalCount} present`}
+              color={presentCount === totalCount ? C.success : C.warning}
+            />
           ) : null}
           {loadingAttendance ? (
             <ActivityIndicator size="small" color={C.text2} />
@@ -293,11 +276,15 @@ function SessionCard({ session, enrollments }: SessionCardProps) {
             />
           )}
         </View>
-      </Pressable>
+      </Touchable>
 
       {/* Inline attendance sheet when expanded */}
       {expanded && !loadingAttendance && attendance !== null ? (
-        <View style={{ marginTop: 12 }}>
+        <Animated.View
+          entering={FadeInDown.duration(220).springify().damping(18)}
+          exiting={FadeOut.duration(140)}
+          style={{ marginTop: spacing.md }}
+        >
           <View style={styles.sheetDivider} />
           <AttendanceSheet
             sessionId={session.id}
@@ -305,7 +292,7 @@ function SessionCard({ session, enrollments }: SessionCardProps) {
             attendance={attendance}
             onSaved={rows => setAttendance(rows)}
           />
-        </View>
+        </Animated.View>
       ) : null}
     </AppCard>
   );
@@ -360,6 +347,8 @@ function CreateSessionModal({
         topic: topic.trim() || undefined,
       });
       reset();
+      haptics.success();
+      toastEmitter.emit('Session created', 'success');
       onCreated();
       onClose();
     } catch (err: unknown) {
@@ -374,84 +363,75 @@ function CreateSessionModal({
   }
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalSheet}>
-          <AppText size={18} weight="700" style={{ marginBottom: 6 }}>
-            New Session
-          </AppText>
-          {batchName ? (
-            <AppText
-              size={13}
-              color={C.text2}
-              style={{ marginBottom: 20 }}
-            >
-              {batchName}
-            </AppText>
-          ) : null}
+    <BottomSheetModal visible={visible} onClose={onClose}>
+      <AppText variant="heading" style={{ marginBottom: spacing.xs }}>
+        New Session
+      </AppText>
+      {batchName ? (
+        <AppText
+          variant="caption"
+          color={C.text2}
+          style={{ marginBottom: spacing.xl }}
+        >
+          {batchName}
+        </AppText>
+      ) : null}
 
-          <View style={{ gap: 14 }}>
-            <AppInput
-              label="Date (YYYY-MM-DD) *"
-              placeholder={todayISO()}
-              value={date}
-              onChangeText={setDate}
-              keyboardType="numbers-and-punctuation"
-            />
-            <AppInput
-              label="Start Time (HH:MM)"
-              placeholder="16:00"
-              value={startTime}
-              onChangeText={setStartTime}
-              keyboardType="numbers-and-punctuation"
-            />
-            <AppInput
-              label="End Time (HH:MM)"
-              placeholder="17:00"
-              value={endTime}
-              onChangeText={setEndTime}
-              keyboardType="numbers-and-punctuation"
-            />
-            <AppInput
-              label="Topic (optional)"
-              placeholder="e.g. Quadratic Equations"
-              value={topic}
-              onChangeText={setTopic}
-            />
-          </View>
-
-          {error ? (
-            <AppText size={12} color={C.error} style={{ marginTop: 10 }}>
-              {error}
-            </AppText>
-          ) : null}
-
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 24 }}>
-            <AppButton
-              label="Cancel"
-              onPress={() => {
-                reset();
-                onClose();
-              }}
-              variant="secondary"
-              style={{ flex: 1 }}
-            />
-            <AppButton
-              label="Create"
-              onPress={handleCreate}
-              loading={creating}
-              disabled={!date.trim()}
-              style={{ flex: 1 }}
-            />
-          </View>
-        </View>
+      <View style={{ gap: spacing.lg }}>
+        <AppInput
+          label="Date (YYYY-MM-DD) *"
+          placeholder={todayISO()}
+          value={date}
+          onChangeText={setDate}
+          keyboardType="numbers-and-punctuation"
+        />
+        <AppInput
+          label="Start Time (HH:MM)"
+          placeholder="16:00"
+          value={startTime}
+          onChangeText={setStartTime}
+          keyboardType="numbers-and-punctuation"
+        />
+        <AppInput
+          label="End Time (HH:MM)"
+          placeholder="17:00"
+          value={endTime}
+          onChangeText={setEndTime}
+          keyboardType="numbers-and-punctuation"
+        />
+        <AppInput
+          label="Topic (optional)"
+          placeholder="e.g. Quadratic Equations"
+          value={topic}
+          onChangeText={setTopic}
+        />
       </View>
-    </Modal>
+
+      {error ? (
+        <AppText variant="caption" color={C.error} style={{ marginTop: spacing.sm }}>
+          {error}
+        </AppText>
+      ) : null}
+
+      <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl }}>
+        <AppButton
+          label="Cancel"
+          onPress={() => {
+            reset();
+            onClose();
+          }}
+          variant="secondary"
+          style={{ flex: 1 }}
+        />
+        <AppButton
+          label="Create"
+          onPress={handleCreate}
+          loading={creating}
+          disabled={!date.trim()}
+          style={{ flex: 1 }}
+        />
+      </View>
+    </BottomSheetModal>
   );
 }
 
@@ -533,28 +513,18 @@ export default function AttendanceScreen() {
           contentContainerStyle={styles.filterContent}
         >
           {batches.map(b => (
-            <Pressable
+            <FilterChip
               key={b.id}
+              label={b.name}
+              active={selectedBatchId === b.id}
               onPress={() => setSelectedBatchId(b.id)}
-              style={[
-                styles.filterChip,
-                selectedBatchId === b.id && styles.filterChipActive,
-              ]}
-            >
-              <AppText
-                size={13}
-                color={selectedBatchId === b.id ? '#000' : C.text}
-                weight={selectedBatchId === b.id ? '600' : '400'}
-              >
-                {b.name}
-              </AppText>
-            </Pressable>
+            />
           ))}
         </ScrollView>
       )}
 
       {sessions.length > 0 && (
-        <AppText size={13} color={C.text3} style={styles.sessionHint}>
+        <AppText variant="caption" color={C.text3} style={styles.sessionHint}>
           {sessions.length} session{sessions.length !== 1 ? 's' : ''} — tap to view or edit attendance
         </AppText>
       )}
@@ -563,7 +533,7 @@ export default function AttendanceScreen() {
         <ActivityIndicator
           size="small"
           color={C.primary}
-          style={{ marginVertical: 32 }}
+          style={{ marginVertical: spacing.xxl }}
         />
       )}
     </View>
@@ -576,30 +546,32 @@ export default function AttendanceScreen() {
       {/* Header */}
       <View style={styles.screenHeader}>
         <View>
-          <AppText size={22} weight="700">
+          <AppText variant="heading">
             Attendance
           </AppText>
-          <AppText size={13} color={C.text2}>
+          <AppText variant="caption" color={C.text2}>
             Start a session then mark each student present or absent.
           </AppText>
         </View>
-        <Pressable
+        <Touchable
           onPress={() => setCreateVisible(true)}
           style={styles.addBtn}
           hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="New session"
         >
-          <MaterialIcons name="add" size={24} color="#000" />
-        </Pressable>
+          <MaterialIcons name="add" size={24} color={C.onPrimary} />
+        </Touchable>
       </View>
 
       {/* No batches state */}
       {batches.length === 0 && !loading ? (
         <View style={styles.empty}>
           <AppText size={32}>📋</AppText>
-          <AppText size={16} weight="600" style={{ marginTop: 12 }}>
+          <AppText variant="subheading" style={{ marginTop: spacing.md }}>
             No batches found
           </AppText>
-          <AppText size={13} color={C.text2} style={{ marginTop: 4 }}>
+          <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.xs }}>
             Create a batch first, then come back to record attendance.
           </AppText>
         </View>
@@ -624,10 +596,10 @@ export default function AttendanceScreen() {
             !loading ? (
               <View style={styles.emptySessions}>
                 <AppText size={28}>🗓️</AppText>
-                <AppText size={15} weight="600" style={{ marginTop: 10 }}>
+                <AppText variant="subheading" style={{ marginTop: 10 }}>
                   No sessions yet
                 </AppText>
-                <AppText size={13} color={C.text2} style={{ marginTop: 4 }}>
+                <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.xs }}>
                   Tap + to start a new session for this batch.
                 </AppText>
               </View>
@@ -658,9 +630,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
   },
   addBtn: {
     width: 36,
@@ -672,73 +644,56 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  filterRow: { marginBottom: 12, maxHeight: 46 },
+  filterRow: { marginBottom: spacing.md, maxHeight: 46 },
   filterContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: C.surface2,
-    borderRadius: radius.lg,
-  },
-  filterChipActive: { backgroundColor: C.primary },
 
   sessionHint: {
-    paddingHorizontal: 16,
-    marginBottom: 8,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
   },
 
-  list: { paddingHorizontal: 16, paddingBottom: 32 },
+  list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
 
   // ── Session card ──────────────────────────────────────────────────────────
   sessionCard: { marginBottom: 10 },
   sessionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
   },
   sessionRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  summaryChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
+    gap: spacing.sm,
   },
 
   // ── Attendance sheet ──────────────────────────────────────────────────────
-  sheetContainer: { paddingTop: 12 },
+  sheetContainer: { paddingTop: spacing.md },
   sheetHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   countRow: {
     flexDirection: 'row',
-    gap: 8,
-  },
-  countChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
+    gap: spacing.sm,
   },
   sheetDivider: {
     height: 1,
     backgroundColor: C.outline,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   studentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
   },
@@ -753,24 +708,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xxl,
   },
   emptySessions: {
     alignItems: 'center',
     paddingTop: 60,
-  },
-
-  // ── Create session modal ──────────────────────────────────────────────────
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: C.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    padding: 24,
-    paddingBottom: 40,
   },
 });

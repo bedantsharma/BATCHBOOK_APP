@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, Text, ActivityIndicator, StyleSheet, ViewStyle } from 'react-native';
 import C, { radius } from '../constants/colors';
+import { haptics } from '../lib/haptics';
 
 interface AppButtonProps {
   label: string;
@@ -23,9 +24,15 @@ export function AppButton({
     variant === 'primary' ? C.primary : variant === 'secondary' ? C.surface2 : 'transparent';
   const textColor = variant === 'primary' ? '#000' : C.text;
 
+  const handlePress = () => {
+    // Subtle tap feedback on the main action; secondary/text stay silent.
+    if (variant === 'primary') haptics.tap();
+    onPress();
+  };
+
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       disabled={disabled || loading}
       style={({ pressed }) => [
         styles.base,

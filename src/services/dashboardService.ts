@@ -42,7 +42,7 @@ export async function getStoredStudentName(): Promise<string | null> {
 
 // ─── Student Profile ──────────────────────────────────────────────────────────
 
-export async function getStudentProfile(): Promise<{
+export interface StudentProfileData {
   id: number;
   name: string;
   initials: string;
@@ -54,13 +54,28 @@ export async function getStudentProfile(): Promise<{
   feeDue: boolean;
   paymentLink: string | null;
   avatarUrl: null;
-}> {
-  const [parentRes, attendanceItems] = await Promise.all([
-    api.get('/parent/me'),
-    getAttendance(),
-  ]);
+}
 
-  const parent = parentRes.data;
+/** Fetch the raw /parent/me payload. */
+export async function getParentMe(): Promise<{
+  name?: string;
+  phone_number?: string;
+  children?: { id: number; name: string }[];
+}> {
+  const { data } = await api.get('/parent/me');
+  return data;
+}
+
+/**
+ * Shape a StudentProfile from already-fetched parent, attendance and fee data.
+ * Pure (aside from reading the stored student id) — does NO network calls, so
+ * callers that already have attendance/fee in hand don't re-fetch them.
+ */
+export async function buildStudentProfile(
+  parent: Awaited<ReturnType<typeof getParentMe>>,
+  attendanceItems: AttendanceItem[],
+  feeRecords: { status?: string; payment_link?: string | null }[]
+): Promise<StudentProfileData> {
   const studentId = parseInt((await getStoredStudentId()) ?? '0', 10);
   const child =
     parent.children?.find((c: { id: number }) => c.id === studentId) ??
@@ -73,7 +88,6 @@ export async function getStudentProfile(): Promise<{
     .slice(0, 2)
     .join('');
 
-  const feeRecords = (await getFeeStatus()) as FeeStatusItem[];
   const hasUnpaidFee = feeRecords.some(
     (f) => f.status === 'NOT_PAID' || f.status === 'PARTIALLY_PAID'
   );
@@ -82,9 +96,8 @@ export async function getStudentProfile(): Promise<{
       (f) => (f.status === 'NOT_PAID' || f.status === 'PARTIALLY_PAID') && f.payment_link
     )?.payment_link ?? null;
 
-  const items = attendanceItems.items as AttendanceItem[];
-  const batchNames = items?.map((a) => a.batch_name) ?? [];
-  const subjects = items?.map((a) => a.subject) ?? [];
+  const batchNames = attendanceItems?.map((a) => a.batch_name) ?? [];
+  const subjects = attendanceItems?.map((a) => a.subject) ?? [];
 
   return {
     id: studentId,
@@ -99,6 +112,20 @@ export async function getStudentProfile(): Promise<{
     paymentLink,
     avatarUrl: null,
   };
+}
+
+/**
+ * Convenience wrapper: fetches parent, attendance and fee, then shapes a profile.
+ * Prefer getParentMe + buildStudentProfile when the caller already fetches
+ * attendance/fee separately (e.g. the dashboard), to avoid duplicate requests.
+ */
+export async function getStudentProfile(): Promise<StudentProfileData> {
+  const [parent, attendance, feeRecords] = await Promise.all([
+    getParentMe(),
+    getAttendance(),
+    getFeeStatus() as Promise<FeeStatusItem[]>,
+  ]);
+  return buildStudentProfile(parent, attendance.items, feeRecords);
 }
 
 // ─── Attendance ───────────────────────────────────────────────────────────────

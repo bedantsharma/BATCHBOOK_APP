@@ -3,20 +3,25 @@ import {
   View,
   FlatList,
   StyleSheet,
-  Pressable,
-  Modal,
   ScrollView,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText } from '../../components/AppText';
 import { AppCard } from '../../components/AppCard';
 import { AppButton } from '../../components/AppButton';
 import { AppInput } from '../../components/AppInput';
+import { FilterChip } from '../../components/FilterChip';
+import { StatusChip } from '../../components/StatusChip';
+import { BottomSheetModal } from '../../components/BottomSheetModal';
+import { Touchable } from '../../components/Touchable';
 import C, { radius } from '../../constants/colors';
+import { spacing } from '../../constants/spacing';
 import { toastEmitter } from '../../lib/toastEmitter';
+import { haptics } from '../../lib/haptics';
 import {
   getBatches,
   getEnrollmentsByBatch,
@@ -72,22 +77,18 @@ function ScoreRow({ score }: { score: TestScore }) {
   return (
     <View style={styles.scoreRow}>
       <View style={{ flex: 1, gap: 2 }}>
-        <AppText size={14} weight="600">
+        <AppText variant="body" weight="600">
           {score.test_name}
         </AppText>
-        <AppText size={12} color={C.text2}>
+        <AppText variant="caption" color={C.text2}>
           {score.subject} · {formatScoreDate(score.date)}
         </AppText>
       </View>
       <View style={styles.scoreRight}>
-        <AppText size={13} weight="600">
+        <AppText variant="caption" weight="600">
           {score.obtained_marks} / {score.max_marks}
         </AppText>
-        <View style={[styles.pctChip, { backgroundColor: pctColor + '22' }]}>
-          <AppText size={11} weight="700" color={pctColor}>
-            {pct}%
-          </AppText>
-        </View>
+        <StatusChip label={`${pct}%`} color={pctColor} />
       </View>
     </View>
   );
@@ -162,6 +163,7 @@ function AddScoreModal({
         max_marks: max,
         obtained_marks: obtained,
       })) as TestScore;
+      haptics.success();
       toastEmitter.emit('Score saved successfully.', 'success');
       onSaved(saved);
       reset();
@@ -175,100 +177,96 @@ function AddScoreModal({
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalSheet}>
-          <AppText size={18} weight="700" style={{ marginBottom: 4 }}>
-            Add Test Score
-          </AppText>
-          <AppText size={13} color={C.text2} style={{ marginBottom: 20 }}>
-            {studentName}
-          </AppText>
+    <BottomSheetModal visible={visible} onClose={onClose}>
+      <AppText variant="heading" style={{ marginBottom: spacing.xs }}>
+        Add Test Score
+      </AppText>
+      <AppText variant="caption" color={C.text2} style={{ marginBottom: spacing.xl }}>
+        {studentName}
+      </AppText>
 
-          <View style={{ gap: 14 }}>
+      <View style={{ gap: spacing.lg }}>
+        <AppInput
+          label="Test Name *"
+          placeholder="e.g. Unit Test 1, Mid-Term"
+          value={testName}
+          onChangeText={t => {
+            setTestName(t);
+            setError('');
+          }}
+        />
+        <AppInput
+          label="Subject *"
+          placeholder="e.g. Maths, Science"
+          value={subject}
+          onChangeText={t => {
+            setSubject(t);
+            setError('');
+          }}
+        />
+        <AppInput
+          label="Date (YYYY-MM-DD) *"
+          placeholder={todayISO()}
+          value={date}
+          onChangeText={t => {
+            setDate(t);
+            setError('');
+          }}
+          keyboardType="numbers-and-punctuation"
+        />
+        <View style={{ flexDirection: 'row', gap: spacing.md }}>
+          <View style={{ flex: 1 }}>
             <AppInput
-              label="Test Name *"
-              placeholder="e.g. Unit Test 1, Mid-Term"
-              value={testName}
+              label="Max Marks *"
+              placeholder="100"
+              value={maxMarks}
               onChangeText={t => {
-                setTestName(t);
+                setMaxMarks(t);
                 setError('');
               }}
+              keyboardType="numeric"
             />
-            <AppInput
-              label="Subject *"
-              placeholder="e.g. Maths, Science"
-              value={subject}
-              onChangeText={t => {
-                setSubject(t);
-                setError('');
-              }}
-            />
-            <AppInput
-              label="Date (YYYY-MM-DD) *"
-              placeholder={todayISO()}
-              value={date}
-              onChangeText={t => {
-                setDate(t);
-                setError('');
-              }}
-              keyboardType="numbers-and-punctuation"
-            />
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <AppInput
-                  label="Max Marks *"
-                  placeholder="100"
-                  value={maxMarks}
-                  onChangeText={t => {
-                    setMaxMarks(t);
-                    setError('');
-                  }}
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <AppInput
-                  label="Obtained Marks *"
-                  placeholder="85"
-                  value={obtainedMarks}
-                  onChangeText={t => {
-                    setObtainedMarks(t);
-                    setError('');
-                  }}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
           </View>
-
-          {error ? (
-            <AppText size={12} color={C.error} style={{ marginTop: 10 }}>
-              {error}
-            </AppText>
-          ) : null}
-
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 24 }}>
-            <AppButton
-              label="Cancel"
-              onPress={() => {
-                reset();
-                onClose();
+          <View style={{ flex: 1 }}>
+            <AppInput
+              label="Obtained Marks *"
+              placeholder="85"
+              value={obtainedMarks}
+              onChangeText={t => {
+                setObtainedMarks(t);
+                setError('');
               }}
-              variant="secondary"
-              style={{ flex: 1 }}
-            />
-            <AppButton
-              label="Save Score"
-              onPress={handleSubmit}
-              loading={saving}
-              disabled={!testName.trim() || !subject.trim()}
-              style={{ flex: 1 }}
+              keyboardType="numeric"
             />
           </View>
         </View>
       </View>
-    </Modal>
+
+      {error ? (
+        <AppText variant="caption" color={C.error} style={{ marginTop: spacing.sm }}>
+          {error}
+        </AppText>
+      ) : null}
+
+      <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl }}>
+        <AppButton
+          label="Cancel"
+          onPress={() => {
+            reset();
+            onClose();
+          }}
+          variant="secondary"
+          style={{ flex: 1 }}
+        />
+        <AppButton
+          label="Save Score"
+          onPress={handleSubmit}
+          loading={saving}
+          disabled={!testName.trim() || !subject.trim()}
+          style={{ flex: 1 }}
+        />
+      </View>
+    </BottomSheetModal>
   );
 }
 
@@ -314,13 +312,13 @@ function StudentCard({ enrollment, scoreCache, onScoresCached }: StudentCardProp
   return (
     <AppCard style={styles.studentCard}>
       {/* Tappable header */}
-      <Pressable onPress={handleExpand} style={styles.cardHeader}>
+      <Touchable onPress={handleExpand} style={styles.cardHeader} accessibilityRole="button">
         <View style={{ flex: 1 }}>
-          <AppText size={15} weight="600">
+          <AppText variant="subheading">
             {displayName}
           </AppText>
           {cachedScores !== undefined && (
-            <AppText size={12} color={C.text2} style={{ marginTop: 2 }}>
+            <AppText variant="caption" color={C.text2} style={{ marginTop: 2 }}>
               {scores.length} score{scores.length !== 1 ? 's' : ''}
             </AppText>
           )}
@@ -336,44 +334,51 @@ function StudentCard({ enrollment, scoreCache, onScoresCached }: StudentCardProp
             />
           )}
         </View>
-      </Pressable>
+      </Touchable>
 
       {/* Expanded content */}
       {expanded && !loadingScores ? (
-        <View style={{ marginTop: 12 }}>
+        <Animated.View
+          entering={FadeInDown.duration(220).springify().damping(18)}
+          exiting={FadeOut.duration(140)}
+          style={{ marginTop: spacing.md }}
+        >
           <View style={styles.divider} />
 
           {/* Add Score button */}
           <View style={styles.addScoreRow}>
-            <Pressable
+            <Touchable
+              haptic
               onPress={() => setAddScoreVisible(true)}
               style={styles.addScoreBtn}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Add score"
             >
               <MaterialIcons name="add" size={16} color={C.primary} />
-              <AppText size={13} color={C.primary} weight="600">
+              <AppText variant="caption" color={C.primary} weight="600">
                 Add Score
               </AppText>
-            </Pressable>
+            </Touchable>
           </View>
 
           {/* Score rows */}
           {scores.length === 0 ? (
             <AppText
-              size={13}
+              variant="caption"
               color={C.text3}
-              style={{ textAlign: 'center', paddingVertical: 20 }}
+              style={{ textAlign: 'center', paddingVertical: spacing.lg }}
             >
               No scores yet — tap Add Score to record the first test.
             </AppText>
           ) : (
-            <View style={{ gap: 8, marginTop: 8 }}>
+            <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
               {scores.map((score, idx) => (
                 <ScoreRow key={score.id ?? idx} score={score} />
               ))}
             </View>
           )}
-        </View>
+        </Animated.View>
       ) : null}
 
       <AddScoreModal
@@ -483,27 +488,17 @@ export default function TestsScreen() {
           contentContainerStyle={styles.filterContent}
         >
           {batches.map(b => (
-            <Pressable
+            <FilterChip
               key={b.id}
+              label={b.name}
+              active={selectedBatchId === b.id}
               onPress={() => {
                 if (b.id !== selectedBatchId) {
                   setScoreCache({});
                   setSelectedBatchId(b.id);
                 }
               }}
-              style={[
-                styles.filterChip,
-                selectedBatchId === b.id && styles.filterChipActive,
-              ]}
-            >
-              <AppText
-                size={13}
-                color={selectedBatchId === b.id ? '#000' : C.text}
-                weight={selectedBatchId === b.id ? '600' : '400'}
-              >
-                {b.name}
-              </AppText>
-            </Pressable>
+            />
           ))}
         </ScrollView>
       )}
@@ -512,14 +507,14 @@ export default function TestsScreen() {
         <ActivityIndicator
           size="small"
           color={C.primary}
-          style={{ marginVertical: 32 }}
+          style={{ marginVertical: spacing.xxl }}
         />
       ) : null}
 
       {!loadingBatches &&
       !loadingEnrollments &&
       enrollments.length > 0 ? (
-        <AppText size={13} color={C.text3} style={styles.enrollmentHint}>
+        <AppText variant="caption" color={C.text3} style={styles.enrollmentHint}>
           {enrollments.length} student{enrollments.length !== 1 ? 's' : ''} — tap to view scores
         </AppText>
       ) : null}
@@ -533,10 +528,10 @@ export default function TestsScreen() {
       {/* Screen header */}
       <View style={styles.screenHeader}>
         <View>
-          <AppText size={22} weight="700">
+          <AppText variant="heading">
             Test Scores
           </AppText>
-          <AppText size={13} color={C.text2}>
+          <AppText variant="caption" color={C.text2}>
             Record and track student test performance.
           </AppText>
         </View>
@@ -546,10 +541,10 @@ export default function TestsScreen() {
       {!loadingBatches && batches.length === 0 ? (
         <View style={styles.empty}>
           <AppText size={32}>📝</AppText>
-          <AppText size={16} weight="600" style={{ marginTop: 12 }}>
+          <AppText variant="subheading" style={{ marginTop: spacing.md }}>
             No batches found
           </AppText>
-          <AppText size={13} color={C.text2} style={{ marginTop: 4, textAlign: 'center' }}>
+          <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.xs, textAlign: 'center' }}>
             Create a batch first, then come back to record test scores.
           </AppText>
         </View>
@@ -578,10 +573,10 @@ export default function TestsScreen() {
             !loadingBatches && !loadingEnrollments ? (
               <View style={styles.emptyStudents}>
                 <AppText size={28}>🎓</AppText>
-                <AppText size={15} weight="600" style={{ marginTop: 10 }}>
+                <AppText variant="subheading" style={{ marginTop: 10 }}>
                   No students in this batch
                 </AppText>
-                <AppText size={13} color={C.text2} style={{ marginTop: 4 }}>
+                <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.xs }}>
                   Enroll students first via the Batches or Students tab.
                 </AppText>
               </View>
@@ -599,33 +594,26 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
 
   screenHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
   },
 
   // ── Batch filter chips ────────────────────────────────────────────────────
-  filterRow: { marginBottom: 12, maxHeight: 46 },
+  filterRow: { marginBottom: spacing.md, maxHeight: 46 },
   filterContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: C.surface2,
-    borderRadius: radius.lg,
-  },
-  filterChipActive: { backgroundColor: C.primary },
 
   enrollmentHint: {
-    paddingHorizontal: 16,
-    marginBottom: 8,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
   },
 
-  list: { paddingHorizontal: 16, paddingBottom: 32 },
+  list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
 
   // ── Student card ──────────────────────────────────────────────────────────
   studentCard: { marginBottom: 10 },
@@ -633,32 +621,32 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
   },
   cardHeaderRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
 
   divider: {
     height: 1,
     backgroundColor: C.outline,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
 
   addScoreRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   addScoreBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
-    backgroundColor: C.primary + '18',
+    backgroundColor: C.primary15,
     borderRadius: radius.md,
   },
 
@@ -676,35 +664,16 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 4,
   },
-  pctChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
-  },
 
   // ── Empty states ──────────────────────────────────────────────────────────
   empty: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xxl,
   },
   emptyStudents: {
     alignItems: 'center',
     paddingTop: 60,
-  },
-
-  // ── Add score modal ───────────────────────────────────────────────────────
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: C.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    padding: 24,
-    paddingBottom: 40,
   },
 });

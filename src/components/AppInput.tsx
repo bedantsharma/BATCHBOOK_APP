@@ -10,13 +10,13 @@ interface AppInputProps extends TextInputProps {
 export function AppInput({ label, error, style, ...props }: AppInputProps) {
   return (
     <View style={styles.wrapper}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         style={[styles.input, error ? styles.inputError : undefined, style as object]}
         placeholderTextColor={C.text3}
         {...props}
       />
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );
 }

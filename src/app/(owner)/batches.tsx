@@ -3,18 +3,24 @@ import {
   View,
   FlatList,
   StyleSheet,
-  Modal,
-  Pressable,
   RefreshControl,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText } from '../../components/AppText';
 import { AppCard } from '../../components/AppCard';
 import { AppButton } from '../../components/AppButton';
 import { AppInput } from '../../components/AppInput';
-import C, { radius } from '../../constants/colors';
+import { StatusChip } from '../../components/StatusChip';
+import { BottomSheetModal } from '../../components/BottomSheetModal';
+import { Touchable } from '../../components/Touchable';
+import { AnimatedProgressBar } from '../../components/AnimatedProgressBar';
+import C from '../../constants/colors';
+import { spacing } from '../../constants/spacing';
+import { toastEmitter } from '../../lib/toastEmitter';
+import { haptics } from '../../lib/haptics';
 import {
   getBatches,
   createBatch,
@@ -87,6 +93,8 @@ function CreateBatchModal({
         max_capacity: form.max_capacity ? parseInt(form.max_capacity, 10) : undefined,
       });
       setForm({ name: '', subject: '', grade: '', start_time: '', end_time: '', max_capacity: '' });
+      haptics.success();
+      toastEmitter.emit('Batch created', 'success');
       onCreated();
       onClose();
     } finally {
@@ -95,71 +103,67 @@ function CreateBatchModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalSheet}>
-          <AppText size={18} weight="700" style={{ marginBottom: 20 }}>
-            New Batch
-          </AppText>
-          <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
-            <View style={{ gap: 16 }}>
-              <AppInput
-                label="Batch Name *"
-                placeholder="e.g. 10th Maths Morning"
-                value={form.name}
-                onChangeText={set('name')}
-              />
-              <AppInput
-                label="Subject"
-                placeholder="e.g. Mathematics"
-                value={form.subject}
-                onChangeText={set('subject')}
-              />
-              <AppInput
-                label="Grade"
-                placeholder="e.g. 10th"
-                value={form.grade}
-                onChangeText={set('grade')}
-              />
-              <AppInput
-                label="Start Time"
-                placeholder="e.g. 07:00"
-                value={form.start_time}
-                onChangeText={set('start_time')}
-              />
-              <AppInput
-                label="End Time"
-                placeholder="e.g. 08:30"
-                value={form.end_time}
-                onChangeText={set('end_time')}
-              />
-              <AppInput
-                label="Capacity"
-                placeholder="e.g. 20"
-                value={form.max_capacity}
-                onChangeText={set('max_capacity')}
-                keyboardType="number-pad"
-              />
-            </View>
-          </ScrollView>
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
-            <AppButton
-              label="Cancel"
-              onPress={onClose}
-              variant="secondary"
-              style={{ flex: 1 }}
-            />
-            <AppButton
-              label="Create"
-              onPress={handleCreate}
-              loading={loading}
-              disabled={!form.name.trim()}
-              style={{ flex: 1 }}
-            />
-          </View>
+    <BottomSheetModal visible={visible} onClose={onClose}>
+      <AppText variant="heading" style={{ marginBottom: spacing.xl }}>
+        New Batch
+      </AppText>
+      <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+        <View style={{ gap: spacing.lg }}>
+          <AppInput
+            label="Batch Name *"
+            placeholder="e.g. 10th Maths Morning"
+            value={form.name}
+            onChangeText={set('name')}
+          />
+          <AppInput
+            label="Subject"
+            placeholder="e.g. Mathematics"
+            value={form.subject}
+            onChangeText={set('subject')}
+          />
+          <AppInput
+            label="Grade"
+            placeholder="e.g. 10th"
+            value={form.grade}
+            onChangeText={set('grade')}
+          />
+          <AppInput
+            label="Start Time"
+            placeholder="e.g. 07:00"
+            value={form.start_time}
+            onChangeText={set('start_time')}
+          />
+          <AppInput
+            label="End Time"
+            placeholder="e.g. 08:30"
+            value={form.end_time}
+            onChangeText={set('end_time')}
+          />
+          <AppInput
+            label="Capacity"
+            placeholder="e.g. 20"
+            value={form.max_capacity}
+            onChangeText={set('max_capacity')}
+            keyboardType="number-pad"
+          />
         </View>
+      </ScrollView>
+      <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl }}>
+        <AppButton
+          label="Cancel"
+          onPress={onClose}
+          variant="secondary"
+          style={{ flex: 1 }}
+        />
+        <AppButton
+          label="Create"
+          onPress={handleCreate}
+          loading={loading}
+          disabled={!form.name.trim()}
+          style={{ flex: 1 }}
+        />
       </View>
-    </Modal>
+    </BottomSheetModal>
   );
 }
 
@@ -215,6 +219,8 @@ function AddStudentModal({
         due_day: '1',
         first_month_amount: '',
       });
+      haptics.success();
+      toastEmitter.emit('Student added', 'success');
       onAdded();
       onClose();
     } finally {
@@ -223,72 +229,68 @@ function AddStudentModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalSheet}>
-          <AppText size={18} weight="700" style={{ marginBottom: 4 }}>
-            Add Student
-          </AppText>
-          {batch && (
-            <AppText size={13} color={C.text2} style={{ marginBottom: 20 }}>
-              to {batch.name}
-            </AppText>
-          )}
-          <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
-            <View style={{ gap: 16 }}>
-              <AppInput
-                label="Student Name *"
-                placeholder="Full name"
-                value={form.student_name}
-                onChangeText={set('student_name')}
-              />
-              <AppInput
-                label="Parent Name"
-                placeholder="Full name"
-                value={form.parent_name}
-                onChangeText={set('parent_name')}
-              />
-              <AppInput
-                label="Parent Phone"
-                placeholder="10-digit number"
-                value={form.parent_phone}
-                onChangeText={v => set('parent_phone')(v.replace(/\D/g, '').slice(0, 10))}
-                keyboardType="phone-pad"
-              />
-              <AppInput
-                label="Fee Due Day"
-                placeholder="e.g. 5 (day of month)"
-                value={form.due_day}
-                onChangeText={set('due_day')}
-                keyboardType="number-pad"
-              />
-              <AppInput
-                label="First Month Amount (₹)"
-                placeholder="e.g. 2000"
-                value={form.first_month_amount}
-                onChangeText={set('first_month_amount')}
-                keyboardType="decimal-pad"
-              />
-            </View>
-          </ScrollView>
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
-            <AppButton
-              label="Cancel"
-              onPress={onClose}
-              variant="secondary"
-              style={{ flex: 1 }}
-            />
-            <AppButton
-              label="Add"
-              onPress={handleAdd}
-              loading={loading}
-              disabled={!form.student_name.trim()}
-              style={{ flex: 1 }}
-            />
-          </View>
+    <BottomSheetModal visible={visible} onClose={onClose}>
+      <AppText variant="heading" style={{ marginBottom: spacing.xs }}>
+        Add Student
+      </AppText>
+      {batch && (
+        <AppText variant="caption" color={C.text2} style={{ marginBottom: spacing.xl }}>
+          to {batch.name}
+        </AppText>
+      )}
+      <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+        <View style={{ gap: spacing.lg }}>
+          <AppInput
+            label="Student Name *"
+            placeholder="Full name"
+            value={form.student_name}
+            onChangeText={set('student_name')}
+          />
+          <AppInput
+            label="Parent Name"
+            placeholder="Full name"
+            value={form.parent_name}
+            onChangeText={set('parent_name')}
+          />
+          <AppInput
+            label="Parent Phone"
+            placeholder="10-digit number"
+            value={form.parent_phone}
+            onChangeText={v => set('parent_phone')(v.replace(/\D/g, '').slice(0, 10))}
+            keyboardType="phone-pad"
+          />
+          <AppInput
+            label="Fee Due Day"
+            placeholder="e.g. 5 (day of month)"
+            value={form.due_day}
+            onChangeText={set('due_day')}
+            keyboardType="number-pad"
+          />
+          <AppInput
+            label="First Month Amount (₹)"
+            placeholder="e.g. 2000"
+            value={form.first_month_amount}
+            onChangeText={set('first_month_amount')}
+            keyboardType="decimal-pad"
+          />
         </View>
+      </ScrollView>
+      <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl }}>
+        <AppButton
+          label="Cancel"
+          onPress={onClose}
+          variant="secondary"
+          style={{ flex: 1 }}
+        />
+        <AppButton
+          label="Add"
+          onPress={handleAdd}
+          loading={loading}
+          disabled={!form.student_name.trim()}
+          style={{ flex: 1 }}
+        />
       </View>
-    </Modal>
+    </BottomSheetModal>
   );
 }
 
@@ -325,37 +327,33 @@ function BatchCard({
       {/* Header row */}
       <View style={styles.batchHeader}>
         <View style={{ flex: 1 }}>
-          <AppText size={16} weight="700">
+          <AppText variant="subheading">
             {batch.name}
           </AppText>
-          <AppText size={13} color={C.text2} style={{ marginTop: 2 }}>
+          <AppText variant="caption" color={C.text2} style={{ marginTop: 2 }}>
             {[batch.subject, batch.grade].filter(Boolean).join(' · ')}
           </AppText>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: statusColor + '22' }]}>
-          <AppText size={11} weight="600" color={statusColor}>
-            {statusKey}
-          </AppText>
-        </View>
+        <StatusChip label={statusKey} color={statusColor} />
       </View>
 
       {/* Timing */}
       {!!timingStr && (
-        <AppText size={13} color={C.text2} style={{ marginTop: 8 }}>
+        <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.sm }}>
           {'🕐 ' + timingStr}
         </AppText>
       )}
 
       {/* Days */}
       {batch.days_of_week && batch.days_of_week.length > 0 && (
-        <AppText size={13} color={C.text2} style={{ marginTop: 4 }}>
+        <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.xs }}>
           {'📅 ' + batch.days_of_week.join(' · ')}
         </AppText>
       )}
 
       {/* Capacity progress */}
       {capacity > 0 && (
-        <View style={{ marginTop: 12 }}>
+        <View style={{ marginTop: spacing.md }}>
           {enrolledCount === null ? (
             <ActivityIndicator
               size="small"
@@ -364,11 +362,8 @@ function BatchCard({
             />
           ) : (
             <>
-              <View style={styles.progressTrack}>
-                {pct > 0 && <View style={[styles.progressFill, { flex: pct }]} />}
-                {pct < 1 && <View style={{ flex: 1 - pct }} />}
-              </View>
-              <AppText size={12} color={C.text2} style={{ marginTop: 4 }}>
+              <AnimatedProgressBar progress={pct} height={4} />
+              <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.xs }}>
                 {enrolled} / {capacity} students
               </AppText>
             </>
@@ -380,7 +375,7 @@ function BatchCard({
         label="Add Student"
         onPress={() => onAddStudent(batch)}
         variant="secondary"
-        style={{ marginTop: 14 }}
+        style={{ marginTop: spacing.md }}
       />
     </AppCard>
   );
@@ -417,21 +412,28 @@ export default function BatchesScreen() {
     <SafeAreaView style={styles.safe}>
       {/* Header */}
       <View style={styles.header}>
-        <AppText size={22} weight="700">
+        <AppText variant="heading">
           Batches
         </AppText>
-        <Pressable onPress={() => setCreateVisible(true)} style={styles.addBtn}>
+        <Touchable
+          onPress={() => setCreateVisible(true)}
+          style={styles.addBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Create batch"
+        >
           <AppText size={28} color={C.primary}>
             +
           </AppText>
-        </Pressable>
+        </Touchable>
       </View>
 
       <FlatList
         data={batches}
         keyExtractor={item => item.id.toString()}
-        renderItem={({ item }) => (
-          <BatchCard batch={item} onAddStudent={b => setAddStudentBatch(b)} />
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify().damping(18)}>
+            <BatchCard batch={item} onAddStudent={b => setAddStudentBatch(b)} />
+          </Animated.View>
         )}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
@@ -445,10 +447,10 @@ export default function BatchesScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <AppText size={36}>📚</AppText>
-            <AppText size={16} weight="600" style={{ marginTop: 12 }}>
+            <AppText variant="subheading" style={{ marginTop: spacing.md }}>
               No batches yet
             </AppText>
-            <AppText size={14} color={C.text2} style={{ marginTop: 4 }}>
+            <AppText variant="body" color={C.text2} style={{ marginTop: spacing.xs }}>
               Tap + to create your first batch
             </AppText>
           </View>
@@ -478,45 +480,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
   },
-  addBtn: { padding: 8 },
+  addBtn: { padding: spacing.sm },
   list: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
-    gap: 12,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.md,
   },
   batchHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
-  },
-  progressTrack: {
-    height: 4,
-    flexDirection: 'row',
-    backgroundColor: C.surface2,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressFill: { backgroundColor: C.primary },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: C.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    padding: 24,
-    paddingBottom: 40,
+    gap: spacing.md,
   },
   empty: { alignItems: 'center', paddingTop: 80 },
 });

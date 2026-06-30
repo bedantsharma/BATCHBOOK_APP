@@ -591,7 +591,7 @@ const styles = StyleSheet.create({
   },
 
   // ── Batch filter chips ────────────────────────────────────────────────────
-  filterRow: { marginBottom: spacing.md, maxHeight: 46 },
+  filterRow: { marginBottom: spacing.md, flexGrow: 0 },
   filterContent: {
     paddingHorizontal: spacing.lg,
     flexDirection: 'row',

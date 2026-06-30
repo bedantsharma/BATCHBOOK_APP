@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
   },
   addBtn: { padding: spacing.sm },
   searchBar: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
-  filterRow: { marginBottom: spacing.sm, maxHeight: 46 },
+  filterRow: { marginBottom: spacing.sm, flexGrow: 0 },
   filterContent: {
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,

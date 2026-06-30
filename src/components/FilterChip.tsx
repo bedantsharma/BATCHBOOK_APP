@@ -13,7 +13,12 @@ interface FilterChipProps {
 
 export function FilterChip({ label, active, onPress }: FilterChipProps) {
   return (
-    <Touchable haptic onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
+    <Touchable
+      haptic
+      onPress={onPress}
+      style={[styles.chip, active && styles.chipActive]}
+      hitSlop={{ top: 6, bottom: 6 }}
+    >
       <AppText
         variant="caption"
         color={active ? C.onPrimary : C.text}
@@ -27,10 +32,11 @@ export function FilterChip({ label, active, onPress }: FilterChipProps) {
 
 const styles = StyleSheet.create({
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 10,
     backgroundColor: C.surface2,
     borderRadius: radius.lg,
+    justifyContent: 'center',
   },
   chipActive: { backgroundColor: C.primary },
 });

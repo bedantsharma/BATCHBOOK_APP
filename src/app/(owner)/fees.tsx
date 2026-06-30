@@ -801,7 +801,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
   },
-  filterRow: { marginBottom: spacing.md, maxHeight: 46 },
+  filterRow: { marginBottom: spacing.md, flexGrow: 0 },
   filterContent: {
     paddingHorizontal: spacing.lg,
     flexDirection: 'row',

@@ -3,7 +3,7 @@ import { View, StyleSheet, Pressable } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { OtpInput } from '../../components/OtpInput';
+import { AppInput } from '../../components/AppInput';
 import { AppButton } from '../../components/AppButton';
 import { AppText } from '../../components/AppText';
 import { LogoMark } from '../../components/LogoMark';
@@ -68,8 +68,10 @@ export default function OtpVerificationScreen() {
   );
 
   const handleOtpChange = (val: string) => {
-    setOtp(val);
-    if (val.length === 6) verify(val);
+    const digits = val.replace(/\D/g, '').slice(0, 6);
+    setOtp(digits);
+    setError('');
+    if (digits.length === 6) verify(digits);
   };
 
   const handleResend = async () => {
@@ -105,10 +107,18 @@ export default function OtpVerificationScreen() {
 
         {/* OTP Input */}
         <View style={styles.otpSection}>
-          <OtpInput value={otp} onChange={handleOtpChange} length={6} />
-          {error ? (
-            <AppText variant="caption" color={C.error} style={styles.errorText}>{error}</AppText>
-          ) : null}
+          <AppInput
+            label="6-digit OTP"
+            placeholder="Enter OTP"
+            value={otp}
+            onChangeText={handleOtpChange}
+            keyboardType="number-pad"
+            maxLength={6}
+            error={error}
+            autoFocus
+            textContentType="oneTimeCode"
+            style={styles.otpInput}
+          />
         </View>
 
         {/* Verify Button */}
@@ -144,8 +154,8 @@ const styles = StyleSheet.create({
   header: { alignItems: 'center', gap: spacing.md, marginTop: spacing.xl, marginBottom: spacing.xxxl },
   title: { letterSpacing: -0.5 },
   subtitle: { textAlign: 'center' },
-  otpSection: { alignItems: 'center', gap: spacing.lg, marginBottom: spacing.xxl },
-  errorText: { textAlign: 'center' },
+  otpSection: { marginBottom: spacing.xxl },
+  otpInput: { textAlign: 'center', fontSize: 22, letterSpacing: 8 },
   verifyBtn: { marginBottom: spacing.xl },
   resendRow: { alignItems: 'center' },
 });

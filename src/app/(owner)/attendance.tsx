@@ -20,6 +20,7 @@ import { StatusChip } from '../../components/StatusChip';
 import { BottomSheetModal } from '../../components/BottomSheetModal';
 import { Touchable } from '../../components/Touchable';
 import { SkeletonList } from '../../components/Skeleton';
+import { DateTimeField } from '../../components/DateTimeField';
 import C, { radius } from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 import { toastEmitter } from '../../lib/toastEmitter';
@@ -333,8 +334,8 @@ function CreateSessionModal({
 
   async function handleCreate() {
     if (batchId === null) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date.trim())) {
-      setError('Enter date as YYYY-MM-DD (e.g. 2026-06-28)');
+    if (!date.trim()) {
+      setError('Please pick a date.');
       return;
     }
     setError('');
@@ -379,27 +380,15 @@ function CreateSessionModal({
       ) : null}
 
       <View style={{ gap: spacing.lg }}>
-        <AppInput
-          label="Date (YYYY-MM-DD) *"
-          placeholder={todayISO()}
-          value={date}
-          onChangeText={setDate}
-          keyboardType="numbers-and-punctuation"
-        />
-        <AppInput
-          label="Start Time (HH:MM)"
-          placeholder="16:00"
-          value={startTime}
-          onChangeText={setStartTime}
-          keyboardType="numbers-and-punctuation"
-        />
-        <AppInput
-          label="End Time (HH:MM)"
-          placeholder="17:00"
-          value={endTime}
-          onChangeText={setEndTime}
-          keyboardType="numbers-and-punctuation"
-        />
+        <DateTimeField label="Date *" mode="date" value={date} onChange={setDate} />
+        <View style={{ flexDirection: 'row', gap: spacing.md }}>
+          <View style={{ flex: 1 }}>
+            <DateTimeField label="Start Time" mode="time" value={startTime} onChange={setStartTime} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <DateTimeField label="End Time" mode="time" value={endTime} onChange={setEndTime} />
+          </View>
+        </View>
         <AppInput
           label="Topic (optional)"
           placeholder="e.g. Quadratic Equations"

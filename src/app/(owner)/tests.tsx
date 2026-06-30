@@ -19,6 +19,7 @@ import { StatusChip } from '../../components/StatusChip';
 import { BottomSheetModal } from '../../components/BottomSheetModal';
 import { Touchable } from '../../components/Touchable';
 import { SkeletonList } from '../../components/Skeleton';
+import { DateTimeField } from '../../components/DateTimeField';
 import C, { radius } from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 import { toastEmitter } from '../../lib/toastEmitter';
@@ -148,10 +149,6 @@ function AddScoreModal({
       setError('Obtained marks must be between 0 and max marks.');
       return;
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date.trim())) {
-      setError('Enter date as YYYY-MM-DD (e.g. 2026-06-28)');
-      return;
-    }
 
     setError('');
     setSaving(true);
@@ -205,15 +202,14 @@ function AddScoreModal({
             setError('');
           }}
         />
-        <AppInput
-          label="Date (YYYY-MM-DD) *"
-          placeholder={todayISO()}
+        <DateTimeField
+          label="Date *"
+          mode="date"
           value={date}
-          onChangeText={t => {
-            setDate(t);
+          onChange={d => {
+            setDate(d);
             setError('');
           }}
-          keyboardType="numbers-and-punctuation"
         />
         <View style={{ flexDirection: 'row', gap: spacing.md }}>
           <View style={{ flex: 1 }}>

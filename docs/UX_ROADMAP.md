@@ -125,32 +125,41 @@ worklet transform bundles fine — it was previously installed-but-unused). The 
 *Goal: no dead screens, no error-prone typing.*
 
 ### Step 3.1 — Skeleton loaders (audit G4)
-- [ ] Create a `Skeleton` component (animated shimmer). Replace the full-screen/list `ActivityIndicator`
-      on content loads (dashboard, owner lists) with skeleton rows shaped like the real content.
-- [ ] Keep spinners only for short blocking actions (save/pay button inline spinner).
+- [x] Created `src/components/Skeleton.tsx` — a `Skeleton` primitive (reanimated opacity-pulse shimmer)
+      plus a card-shaped `SkeletonList`. Replaced the full-screen/list `ActivityIndicator` on content
+      loads across batches, students, fees (records), attendance, tests, and the student dashboard home.
+- [x] Kept spinners only for short blocking actions (button inline spinner, fee-structure section load).
 
 ### Step 3.2 — Empty & error states polish
-- [ ] Upgrade text-only empty states (student dashboard `:278,307,476,555`) to match the owner lists'
-      pattern (icon/illustration + explanatory copy + a first-action button where relevant).
-- [ ] Make load errors recoverable: where errors are currently swallowed and rely on the global toast,
-      add an inline "Couldn't load — Retry" state on the main content screens.
+- [x] Added `src/components/EmptyState.tsx` (full + `compact` variants) and upgraded the student
+      dashboard's bare-text section empties (today's/upcoming classes, fees) to the compact icon+copy form.
+- [x] Added `src/components/ErrorRetry.tsx` (inline "Couldn't load — Retry") and wired it into the
+      batches + students lists and the dashboard home tab (which previously swallowed load errors).
 
 ### Step 3.3 — Real date/time pickers (audit G7)
-- [ ] Replace free-text date fields (`attendance.tsx:348`, `tests.tsx:149`) with a native date picker
-      (`@react-native-community/datetimepicker` or expo equivalent). This is a *scheduling* app —
-      typing `YYYY-MM-DD` by hand is the most error-prone interaction in it.
+- [x] Added `@react-native-community/datetimepicker` (SDK 56 compatible, via `expo install`) and
+      `src/components/DateTimeField.tsx` — a tappable field opening the native picker (iOS spinner in a
+      bottom sheet, Android dialog). Replaced the free-text date in the create-session and add-score
+      modals, plus the session start/end times. Dropped the old regex date validation.
 
 ### Step 3.4 — Keyboard handling in modals (audit G7)
-- [ ] Wrap form modals (add student, create batch, create session, payment) in `KeyboardAvoidingView`
-      so the keyboard never covers the input being typed. (Currently only `phone-login`/`setup` have it.)
+- [x] `BottomSheetModal` now wraps its content in `KeyboardAvoidingView`, so every form modal
+      (add student, create batch, create session, payment) keeps inputs above the keyboard.
 
 ### Step 3.5 — Consistent form validation
-- [ ] Standardize on per-field `error` via `AppInput`'s existing `error` prop (the `tests.tsx`
-      add-score form is the good model — copy its approach to `students`/`batches` add modals).
-- [ ] Add a focus state style to `AppInput` (highlight border on focus) — small but makes forms feel responsive.
+- [x] Standardized on per-field `error` via `AppInput`'s `error` prop (modeled on the `tests.tsx`
+      add-score form) for Create Batch and both Add Student modals — required batch, 10-digit phone,
+      1–31 due day, non-negative amount, positive capacity; errors clear as the field is edited.
+- [x] Added a focus-state border (primary) to `AppInput`.
 
 **Phase 3 done when:** loads show skeletons, every list has a designed empty/error state, dates are
 picked not typed, and no keyboard covers an input.
+
+✅ **Phase 3 complete (2026-07-01).** New shared pieces: `Skeleton`/`SkeletonList`, `EmptyState`,
+`ErrorRetry`, `DateTimeField`. Verified with `tsc --noEmit` (clean) and an iOS production bundle export.
+Also redesigned the **landing screen** (separate request): role CTAs now sit above the fold with the
+four features collapsed into a single manually-swipeable highlight strip — see
+`docs/superpowers/specs/2026-07-01-landing-redesign-and-phase3-design.md`.
 
 ---
 

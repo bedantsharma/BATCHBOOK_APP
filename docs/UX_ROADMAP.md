@@ -213,3 +213,41 @@ type doesn't break layouts.
 
 **Golden rule:** migrate one screen end-to-end before rolling a change across all screens — it lets you
 fix the *system* (the scale/component) once instead of fighting it on every screen.
+
+---
+
+## Session log — 2026-07-01 (evening)
+All on branch `ux/foundation` (PR #1 → `master`, not yet merged — revamp continues on this branch).
+
+**Phase 3 — State & form design (complete).** Skeleton loaders (`Skeleton`/`SkeletonList`) replacing
+list/dashboard spinners; designed empty/error states (`EmptyState`, `ErrorRetry`) incl. inline
+"Couldn't load — Retry"; native date/time pickers (`DateTimeField` + `@react-native-community/
+datetimepicker`) for sessions & test scores; `KeyboardAvoidingView` baked into `BottomSheetModal`;
+per-field validation + an `AppInput` focus border. See Phase 3 above for the per-step detail.
+
+**Phase 4 — Navigation coherence (complete).** Moved the student dashboard off its hand-rolled
+`useState` tab bar onto real expo-router `Tabs` (home/schedule/fees/profile). Shared data lifted into
+`StudentDataProvider`; new `StudentScreen` wrapper finally wires the previously-orphaned
+pull-to-refresh. Old `dashboard.tsx` removed. See Phase 4 above.
+
+**Landing screen redesign (separate request).** Role CTAs now sit above the fold; the four feature
+cards collapsed into a single manually-swipeable highlight strip with page dots. Fixes the "stale,
+everything-at-once, student button below the fold" complaint. Spec:
+`docs/superpowers/specs/2026-07-01-landing-redesign-and-phase3-design.md`.
+
+**Bug fixes (not roadmap phases):**
+- **On-device networking** — API base URL now auto-detects the dev machine's LAN IP from Expo's
+  packager host instead of hardcoding `localhost:8000` (which on a physical phone meant the phone
+  itself). Unblocks testing on a real device. Prod/staging env URLs still take priority.
+- **Owner OTP entry** — replaced the 6-box `OtpInput` with a single number-only text field (matches
+  the student-side input), keeping auto-submit + inline error.
+- **Batch filter chips** — removed a fixed `maxHeight:46` that clipped chip text ("cut in half") under
+  larger OS font scales, on students/tests/attendance/fees; bumped `FilterChip` padding + hitSlop for a
+  comfortable tap target.
+- **Attendance header** — the long subtitle pushed the "+" new-session button partially off-screen;
+  gave the text block `flex:1` so the button stays put.
+
+**Verification:** `tsc --noEmit` clean throughout; iOS production bundle exports successfully.
+
+**Next up:** Phase 5 — Accessibility (labels on icon-only controls, contrast on `text3`, Dynamic Type
+reflow, no color-only status).

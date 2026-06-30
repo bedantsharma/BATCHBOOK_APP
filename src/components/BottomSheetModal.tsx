@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, StyleSheet } from 'react-native';
+import { Modal, View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import C, { radius } from '../constants/colors';
 import { spacing } from '../constants/spacing';
 
@@ -12,9 +12,12 @@ interface BottomSheetModalProps {
 export function BottomSheetModal({ visible, onClose, children }: BottomSheetModalProps) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <View style={styles.sheet}>{children}</View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

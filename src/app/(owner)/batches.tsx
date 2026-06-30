@@ -78,12 +78,26 @@ function CreateBatchModal({
     max_capacity: '',
   });
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof CreateBatchForm, string>>>({});
 
-  const set = (key: keyof CreateBatchForm) => (val: string) =>
+  const set = (key: keyof CreateBatchForm) => (val: string) => {
     setForm(f => ({ ...f, [key]: val }));
+    setErrors(e => (e[key] ? { ...e, [key]: undefined } : e));
+  };
+
+  const validate = (): boolean => {
+    const next: Partial<Record<keyof CreateBatchForm, string>> = {};
+    if (!form.name.trim()) next.name = 'Batch name is required.';
+    if (form.max_capacity.trim()) {
+      const cap = parseInt(form.max_capacity, 10);
+      if (isNaN(cap) || cap <= 0) next.max_capacity = 'Capacity must be a positive number.';
+    }
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
 
   const handleCreate = async () => {
-    if (!form.name.trim()) return;
+    if (!validate()) return;
     setLoading(true);
     try {
       await createBatch({
@@ -95,6 +109,7 @@ function CreateBatchModal({
         max_capacity: form.max_capacity ? parseInt(form.max_capacity, 10) : undefined,
       });
       setForm({ name: '', subject: '', grade: '', start_time: '', end_time: '', max_capacity: '' });
+      setErrors({});
       haptics.success();
       toastEmitter.emit('Batch created', 'success');
       onCreated();
@@ -116,6 +131,7 @@ function CreateBatchModal({
             placeholder="e.g. 10th Maths Morning"
             value={form.name}
             onChangeText={set('name')}
+            error={errors.name}
           />
           <AppInput
             label="Subject"
@@ -147,6 +163,7 @@ function CreateBatchModal({
             value={form.max_capacity}
             onChangeText={set('max_capacity')}
             keyboardType="number-pad"
+            error={errors.max_capacity}
           />
         </View>
       </ScrollView>
@@ -198,12 +215,31 @@ function AddStudentModal({
     first_month_amount: '',
   });
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Partial<Record<keyof AddStudentForm, string>>>({});
 
-  const set = (key: keyof AddStudentForm) => (val: string) =>
+  const set = (key: keyof AddStudentForm) => (val: string) => {
     setForm(f => ({ ...f, [key]: val }));
+    setErrors(e => (e[key] ? { ...e, [key]: undefined } : e));
+  };
+
+  const validate = (): boolean => {
+    const next: Partial<Record<keyof AddStudentForm, string>> = {};
+    if (!form.student_name.trim()) next.student_name = 'Student name is required.';
+    if (form.parent_phone && form.parent_phone.length !== 10) {
+      next.parent_phone = 'Enter a 10-digit phone number.';
+    }
+    const day = parseInt(form.due_day, 10);
+    if (isNaN(day) || day < 1 || day > 31) next.due_day = 'Due day must be between 1 and 31.';
+    if (form.first_month_amount.trim()) {
+      const amt = parseFloat(form.first_month_amount);
+      if (isNaN(amt) || amt < 0) next.first_month_amount = 'Enter a valid amount.';
+    }
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
 
   const handleAdd = async () => {
-    if (!batch || !form.student_name.trim()) return;
+    if (!batch || !validate()) return;
     setLoading(true);
     try {
       await inviteStudent({
@@ -221,6 +257,7 @@ function AddStudentModal({
         due_day: '1',
         first_month_amount: '',
       });
+      setErrors({});
       haptics.success();
       toastEmitter.emit('Student added', 'success');
       onAdded();
@@ -247,6 +284,7 @@ function AddStudentModal({
             placeholder="Full name"
             value={form.student_name}
             onChangeText={set('student_name')}
+            error={errors.student_name}
           />
           <AppInput
             label="Parent Name"
@@ -260,6 +298,7 @@ function AddStudentModal({
             value={form.parent_phone}
             onChangeText={v => set('parent_phone')(v.replace(/\D/g, '').slice(0, 10))}
             keyboardType="phone-pad"
+            error={errors.parent_phone}
           />
           <AppInput
             label="Fee Due Day"
@@ -267,6 +306,7 @@ function AddStudentModal({
             value={form.due_day}
             onChangeText={set('due_day')}
             keyboardType="number-pad"
+            error={errors.due_day}
           />
           <AppInput
             label="First Month Amount (₹)"
@@ -274,6 +314,7 @@ function AddStudentModal({
             value={form.first_month_amount}
             onChangeText={set('first_month_amount')}
             keyboardType="decimal-pad"
+            error={errors.first_month_amount}
           />
         </View>
       </ScrollView>

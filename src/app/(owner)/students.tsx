@@ -99,6 +99,9 @@ function AddStudentModal({
   const [dueDay, setDueDay] = useState('1');
   const [firstMonthAmount, setFirstMonthAmount] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+
+  const clearErr = (key: string) => setErrors(e => (e[key] ? { ...e, [key]: undefined } : e));
 
   const reset = () => {
     setSelectedBatchId(null);
@@ -107,10 +110,26 @@ function AddStudentModal({
     setParentPhone('');
     setDueDay('1');
     setFirstMonthAmount('');
+    setErrors({});
+  };
+
+  const validate = (): boolean => {
+    const next: Record<string, string | undefined> = {};
+    if (selectedBatchId == null) next.batch = 'Please select a batch.';
+    if (!studentName.trim()) next.studentName = 'Student name is required.';
+    if (parentPhone && parentPhone.length !== 10) next.parentPhone = 'Enter a 10-digit phone number.';
+    const day = parseInt(dueDay, 10);
+    if (isNaN(day) || day < 1 || day > 31) next.dueDay = 'Due day must be between 1 and 31.';
+    if (firstMonthAmount.trim()) {
+      const amt = parseFloat(firstMonthAmount);
+      if (isNaN(amt) || amt < 0) next.firstMonthAmount = 'Enter a valid amount.';
+    }
+    setErrors(next);
+    return Object.keys(next).every(k => !next[k]);
   };
 
   const handleAdd = async () => {
-    if (selectedBatchId == null || !studentName.trim()) return;
+    if (!validate() || selectedBatchId == null) return;
     setLoading(true);
     try {
       await inviteStudent({
@@ -154,18 +173,22 @@ function AddStudentModal({
                     key={b.id}
                     label={b.name}
                     active={selectedBatchId === b.id}
-                    onPress={() => setSelectedBatchId(b.id)}
+                    onPress={() => { setSelectedBatchId(b.id); clearErr('batch'); }}
                   />
                 ))}
               </View>
             </ScrollView>
+            {errors.batch ? (
+              <AppText variant="caption" color={C.error}>{errors.batch}</AppText>
+            ) : null}
           </View>
 
           <AppInput
             label="Student Name *"
             placeholder="Full name"
             value={studentName}
-            onChangeText={setStudentName}
+            onChangeText={t => { setStudentName(t); clearErr('studentName'); }}
+            error={errors.studentName}
           />
           <AppInput
             label="Parent Name"
@@ -177,22 +200,25 @@ function AddStudentModal({
             label="Parent Phone"
             placeholder="10-digit number"
             value={parentPhone}
-            onChangeText={v => setParentPhone(v.replace(/\D/g, '').slice(0, 10))}
+            onChangeText={v => { setParentPhone(v.replace(/\D/g, '').slice(0, 10)); clearErr('parentPhone'); }}
             keyboardType="phone-pad"
+            error={errors.parentPhone}
           />
           <AppInput
             label="Fee Due Day"
             placeholder="e.g. 5"
             value={dueDay}
-            onChangeText={setDueDay}
+            onChangeText={t => { setDueDay(t); clearErr('dueDay'); }}
             keyboardType="number-pad"
+            error={errors.dueDay}
           />
           <AppInput
             label="First Month Amount (₹)"
             placeholder="e.g. 2000"
             value={firstMonthAmount}
-            onChangeText={setFirstMonthAmount}
+            onChangeText={t => { setFirstMonthAmount(t); clearErr('firstMonthAmount'); }}
             keyboardType="decimal-pad"
+            error={errors.firstMonthAmount}
           />
         </View>
       </ScrollView>

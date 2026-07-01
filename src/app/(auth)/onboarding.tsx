@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Pressable, Text } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, StyleSheet, ScrollView, Text } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppButton } from '../../components/AppButton';
 import { AppInput } from '../../components/AppInput';
 import { AppText } from '../../components/AppText';
 import { AppCard } from '../../components/AppCard';
+import { Touchable } from '../../components/Touchable';
+import { AnimatedProgressBar } from '../../components/AnimatedProgressBar';
 import C, { radius } from '../../constants/colors';
+import { spacing } from '../../constants/spacing';
 
 type Role = 'owner' | 'student' | null;
 
@@ -22,9 +25,15 @@ const TOTAL_STEPS = 3;
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const params = useLocalSearchParams<{ role?: string }>();
+  // When a role is passed in from the landing screen, pre-select it and skip
+  // the role-selection step (step 1) so we don't ask "Who are you?" twice.
+  const preselectedRole: Role =
+    params.role === 'student' || params.role === 'owner' ? params.role : null;
+
+  const [step, setStep] = useState(preselectedRole ? 2 : 1);
   const [profile, setProfile] = useState<Profile>({
-    role: null,
+    role: preselectedRole,
     name: '',
     parentName: '',
     parentPhone: '',
@@ -36,6 +45,16 @@ export default function OnboardingScreen() {
   const handleRoleSelect = (role: Role) => {
     setProfile(p => ({ ...p, role }));
     setStep(2);
+  };
+
+  const handleBack = () => {
+    // If step 1 was skipped because a role was preselected, going back from
+    // step 2 should return to the landing screen rather than re-show the picker.
+    if (step === 2 && preselectedRole) {
+      router.back();
+      return;
+    }
+    setStep(s => s - 1);
   };
 
   const handleContinue = async () => {
@@ -76,45 +95,42 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       {/* Progress Bar */}
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { flex: progress }]} />
-        <View style={{ flex: 1 - progress }} />
-      </View>
+      <AnimatedProgressBar progress={progress} height={3} rounded={false} trackColor={C.surface2} />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Back */}
         {step > 1 && (
-          <Pressable onPress={() => setStep(s => s - 1)} style={styles.back}>
-            <AppText size={14} color={C.primary}>← Back</AppText>
-          </Pressable>
+          <Touchable onPress={handleBack} style={styles.back} accessibilityRole="button" accessibilityLabel="Go back">
+            <AppText variant="body" color={C.primary}>← Back</AppText>
+          </Touchable>
         )}
 
         {/* Step 1: Role Selection */}
         {step === 1 && (
           <View style={styles.stepContainer}>
-            <AppText size={26} weight="700" style={styles.stepTitle}>Who are you?</AppText>
-            <AppText size={14} color={C.text2} style={styles.stepSubtitle}>
+            <AppText variant="title" style={styles.stepTitle}>Who are you?</AppText>
+            <AppText variant="body" color={C.text2} style={styles.stepSubtitle}>
               This helps us personalise your experience
             </AppText>
             <View style={styles.roleCards}>
-              <Pressable onPress={() => handleRoleSelect('owner')} style={styles.roleCardWrapper}>
+              <Touchable haptic onPress={() => handleRoleSelect('owner')} style={styles.roleCardWrapper}>
                 <AppCard style={ownerCardStyle}>
                   <AppText size={32}>👨‍🏫</AppText>
-                  <AppText size={17} weight="600" style={styles.roleCardLabel}>I'm a Tutor</AppText>
-                  <AppText size={13} color={C.text2} style={styles.roleCardDesc}>
+                  <AppText variant="subheading" style={styles.roleCardLabel}>I'm a Tutor</AppText>
+                  <AppText variant="caption" color={C.text2} style={styles.roleCardDesc}>
                     Manage batches, fees, and students
                   </AppText>
                 </AppCard>
-              </Pressable>
-              <Pressable onPress={() => handleRoleSelect('student')} style={styles.roleCardWrapper}>
+              </Touchable>
+              <Touchable haptic onPress={() => handleRoleSelect('student')} style={styles.roleCardWrapper}>
                 <AppCard style={studentCardStyle}>
                   <AppText size={32}>🎓</AppText>
-                  <AppText size={17} weight="600" style={styles.roleCardLabel}>I'm a Student</AppText>
-                  <AppText size={13} color={C.text2} style={styles.roleCardDesc}>
+                  <AppText variant="subheading" style={styles.roleCardLabel}>I'm a Student</AppText>
+                  <AppText variant="caption" color={C.text2} style={styles.roleCardDesc}>
                     View schedule, fees, and attendance
                   </AppText>
                 </AppCard>
-              </Pressable>
+              </Touchable>
             </View>
           </View>
         )}
@@ -122,8 +138,8 @@ export default function OnboardingScreen() {
         {/* Step 2: Profile Details */}
         {step === 2 && (
           <View style={styles.stepContainer}>
-            <AppText size={26} weight="700" style={styles.stepTitle}>Your details</AppText>
-            <AppText size={14} color={C.text2} style={styles.stepSubtitle}>
+            <AppText variant="title" style={styles.stepTitle}>Your details</AppText>
+            <AppText variant="body" color={C.text2} style={styles.stepSubtitle}>
               {profile.role === 'owner' ? 'Tell us your name' : 'Tell us about the student'}
             </AppText>
             <View style={styles.form}>
@@ -167,8 +183,8 @@ export default function OnboardingScreen() {
           <View style={styles.stepContainer}>
             {profile.role === 'owner' ? (
               <>
-                <AppText size={26} weight="700" style={styles.stepTitle}>Almost there!</AppText>
-                <AppText size={14} color={C.text2} style={styles.stepSubtitle}>
+                <AppText variant="title" style={styles.stepTitle}>Almost there!</AppText>
+                <AppText variant="body" color={C.text2} style={styles.stepSubtitle}>
                   Login with your mobile number to continue
                 </AppText>
                 <AppButton
@@ -181,8 +197,8 @@ export default function OnboardingScreen() {
             ) : (
               <>
                 <AppText size={32} style={styles.joinIcon}>🔗</AppText>
-                <AppText size={26} weight="700" style={styles.stepTitle}>Ask your tutor</AppText>
-                <AppText size={14} color={C.text2} style={styles.joinSubtitle}>
+                <AppText variant="title" style={styles.stepTitle}>Ask your tutor</AppText>
+                <AppText variant="body" color={C.text2} style={styles.joinSubtitle}>
                   Ask your tutor to send you a BatchBook join link. It looks like:
                 </AppText>
                 <View style={styles.joinCodeBox}>
@@ -205,33 +221,27 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
-  progressTrack: {
-    height: 3,
-    flexDirection: 'row',
-    backgroundColor: C.surface2,
-  },
-  progressFill: { backgroundColor: C.primary },
-  scroll: { paddingHorizontal: 24, paddingBottom: 48, flexGrow: 1 },
-  back: { alignSelf: 'flex-start', paddingVertical: 12 },
-  stepContainer: { paddingTop: 32 },
-  stepTitle: { letterSpacing: -0.5, marginBottom: 8 },
-  stepSubtitle: { lineHeight: 20, marginBottom: 32 },
-  roleCards: { gap: 16 },
+  scroll: { paddingHorizontal: spacing.xl, paddingBottom: 48, flexGrow: 1 },
+  back: { alignSelf: 'flex-start', paddingVertical: spacing.md },
+  stepContainer: { paddingTop: spacing.xxl },
+  stepTitle: { letterSpacing: -0.5, marginBottom: spacing.sm },
+  stepSubtitle: { lineHeight: 20, marginBottom: spacing.xxl },
+  roleCards: { gap: spacing.lg },
   roleCardWrapper: {},
-  roleCard: { alignItems: 'center', paddingVertical: 24 },
+  roleCard: { alignItems: 'center', paddingVertical: spacing.xl },
   roleCardActive: { borderWidth: 2, borderColor: C.primary },
-  roleCardLabel: { marginTop: 12 },
-  roleCardDesc: { marginTop: 4, textAlign: 'center' },
-  form: { gap: 20 },
-  continueBtn: { marginTop: 8 },
-  doneBtn: { marginTop: 32 },
-  joinIcon: { textAlign: 'center', marginBottom: 16 },
+  roleCardLabel: { marginTop: spacing.md },
+  roleCardDesc: { marginTop: spacing.xs, textAlign: 'center' },
+  form: { gap: spacing.xl },
+  continueBtn: { marginTop: spacing.sm },
+  doneBtn: { marginTop: spacing.xxl },
+  joinIcon: { textAlign: 'center', marginBottom: spacing.lg },
   joinSubtitle: { lineHeight: 20, marginBottom: 20 },
   joinCodeBox: {
     backgroundColor: C.surface2,
     borderRadius: radius.md,
     padding: 14,
-    marginBottom: 32,
+    marginBottom: spacing.xxl,
     alignItems: 'center',
   },
   joinCodeText: {

@@ -3,11 +3,12 @@ import { View, StyleSheet, Pressable } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { OtpInput } from '../../components/OtpInput';
+import { AppInput } from '../../components/AppInput';
 import { AppButton } from '../../components/AppButton';
 import { AppText } from '../../components/AppText';
 import { LogoMark } from '../../components/LogoMark';
 import C from '../../constants/colors';
+import { spacing } from '../../constants/spacing';
 import api from '../../services/api';
 import { supabase } from '../../lib/supabaseClient';
 
@@ -67,8 +68,10 @@ export default function OtpVerificationScreen() {
   );
 
   const handleOtpChange = (val: string) => {
-    setOtp(val);
-    if (val.length === 6) verify(val);
+    const digits = val.replace(/\D/g, '').slice(0, 6);
+    setOtp(digits);
+    setError('');
+    if (digits.length === 6) verify(digits);
   };
 
   const handleResend = async () => {
@@ -90,24 +93,32 @@ export default function OtpVerificationScreen() {
       <View style={styles.container}>
         {/* Back */}
         <Pressable onPress={() => router.back()} style={styles.back}>
-          <AppText size={14} color={C.primary}>← Back</AppText>
+          <AppText variant="body" color={C.primary}>← Back</AppText>
         </Pressable>
 
         {/* Header */}
         <View style={styles.header}>
           <LogoMark size={48} />
-          <AppText size={26} weight="700" style={styles.title}>Enter OTP</AppText>
-          <AppText size={14} color={C.text2} style={styles.subtitle}>
+          <AppText variant="title" style={styles.title}>Enter OTP</AppText>
+          <AppText variant="body" color={C.text2} style={styles.subtitle}>
             Sent to +91 {phone}
           </AppText>
         </View>
 
         {/* OTP Input */}
         <View style={styles.otpSection}>
-          <OtpInput value={otp} onChange={handleOtpChange} length={6} />
-          {error ? (
-            <AppText size={13} color={C.error} style={styles.errorText}>{error}</AppText>
-          ) : null}
+          <AppInput
+            label="6-digit OTP"
+            placeholder="Enter OTP"
+            value={otp}
+            onChangeText={handleOtpChange}
+            keyboardType="number-pad"
+            maxLength={6}
+            error={error}
+            autoFocus
+            textContentType="oneTimeCode"
+            style={styles.otpInput}
+          />
         </View>
 
         {/* Verify Button */}
@@ -122,10 +133,10 @@ export default function OtpVerificationScreen() {
         {/* Resend */}
         <View style={styles.resendRow}>
           {countdown > 0 ? (
-            <AppText size={14} color={C.text2}>Resend OTP in {countdown}s</AppText>
+            <AppText variant="body" color={C.text2}>Resend OTP in {countdown}s</AppText>
           ) : (
             <Pressable onPress={handleResend} disabled={resending}>
-              <AppText size={14} color={resending ? C.text2 : C.primary}>
+              <AppText variant="body" color={resending ? C.text2 : C.primary}>
                 {resending ? 'Sending...' : 'Resend OTP'}
               </AppText>
             </Pressable>
@@ -138,13 +149,13 @@ export default function OtpVerificationScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
-  container: { flex: 1, paddingHorizontal: 24, paddingTop: 16 },
-  back: { alignSelf: 'flex-start', paddingVertical: 8 },
-  header: { alignItems: 'center', gap: 12, marginTop: 24, marginBottom: 40 },
+  container: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.lg },
+  back: { alignSelf: 'flex-start', paddingVertical: spacing.sm },
+  header: { alignItems: 'center', gap: spacing.md, marginTop: spacing.xl, marginBottom: spacing.xxxl },
   title: { letterSpacing: -0.5 },
   subtitle: { textAlign: 'center' },
-  otpSection: { alignItems: 'center', gap: 16, marginBottom: 32 },
-  errorText: { textAlign: 'center' },
-  verifyBtn: { marginBottom: 24 },
+  otpSection: { marginBottom: spacing.xxl },
+  otpInput: { textAlign: 'center', fontSize: 22, letterSpacing: 8 },
+  verifyBtn: { marginBottom: spacing.xl },
   resendRow: { alignItems: 'center' },
 });

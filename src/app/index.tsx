@@ -22,7 +22,7 @@ export default function Index() {
       if (role === 'owner') {
         router.replace('/(owner)/batches' as AnyRoute);
       } else if (role === 'student') {
-        router.replace('/(student)/dashboard' as AnyRoute);
+        router.replace('/(student)/home' as AnyRoute);
       } else {
         router.replace('/(auth)/onboarding' as AnyRoute);
       }

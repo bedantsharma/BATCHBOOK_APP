@@ -7,6 +7,7 @@ import { AppButton } from '../../components/AppButton';
 import { AppText } from '../../components/AppText';
 import { LogoMark } from '../../components/LogoMark';
 import C from '../../constants/colors';
+import { spacing } from '../../constants/spacing';
 import api from '../../services/api';
 
 export default function PhoneLoginScreen() {
@@ -44,14 +45,14 @@ export default function PhoneLoginScreen() {
         <View style={styles.container}>
           {/* Back */}
           <Pressable onPress={() => router.back()} style={styles.back}>
-            <AppText size={14} color={C.primary}>← Back</AppText>
+            <AppText variant="body" color={C.primary}>← Back</AppText>
           </Pressable>
 
           {/* Header */}
           <View style={styles.header}>
             <LogoMark size={48} />
-            <AppText size={26} weight="700" style={styles.title}>Tutor Login</AppText>
-            <AppText size={14} color={C.text2} style={styles.subtitle}>
+            <AppText variant="title" style={styles.title}>Tutor Login</AppText>
+            <AppText variant="body" color={C.text2} style={styles.subtitle}>
               We'll send a 6-digit OTP to your mobile number
             </AppText>
           </View>
@@ -88,11 +89,11 @@ export default function PhoneLoginScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
   kav: { flex: 1 },
-  container: { flex: 1, paddingHorizontal: 24, paddingTop: 16 },
-  back: { alignSelf: 'flex-start', paddingVertical: 8 },
-  header: { alignItems: 'center', gap: 12, marginTop: 24, marginBottom: 40 },
+  container: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.lg },
+  back: { alignSelf: 'flex-start', paddingVertical: spacing.sm },
+  header: { alignItems: 'center', gap: spacing.md, marginTop: spacing.xl, marginBottom: spacing.xxxl },
   title: { letterSpacing: -0.5 },
   subtitle: { textAlign: 'center', lineHeight: 20 },
-  form: { gap: 20 },
-  submitBtn: { marginTop: 8 },
+  form: { gap: spacing.xl },
+  submitBtn: { marginTop: spacing.sm },
 });

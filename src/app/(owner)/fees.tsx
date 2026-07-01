@@ -3,19 +3,26 @@ import {
   View,
   FlatList,
   StyleSheet,
-  Pressable,
-  Modal,
   ScrollView,
   Alert,
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText } from '../../components/AppText';
 import { AppCard } from '../../components/AppCard';
 import { AppButton } from '../../components/AppButton';
 import { AppInput } from '../../components/AppInput';
-import C, { radius } from '../../constants/colors';
+import { FilterChip } from '../../components/FilterChip';
+import { StatusChip } from '../../components/StatusChip';
+import { BottomSheetModal } from '../../components/BottomSheetModal';
+import { Touchable } from '../../components/Touchable';
+import { SkeletonList } from '../../components/Skeleton';
+import C, { radius, withOpacity } from '../../constants/colors';
+import { spacing } from '../../constants/spacing';
+import { toastEmitter } from '../../lib/toastEmitter';
+import { haptics } from '../../lib/haptics';
 import {
   getBatches,
   getBatchFees,
@@ -112,16 +119,16 @@ function SummaryCard({
 }) {
   return (
     <AppCard style={styles.summaryCard}>
-      <View style={[styles.summaryBadge, { backgroundColor: accentColor + '33' }]}>
+      <View style={[styles.summaryBadge, { backgroundColor: withOpacity(accentColor, 'medium') }]}>
         <View style={[styles.summaryBadgeDot, { backgroundColor: accentColor }]} />
       </View>
-      <AppText size={11} color={C.text2} style={{ marginTop: 8, marginBottom: 4 }}>
+      <AppText variant="micro" color={C.text2} style={{ marginTop: spacing.sm, marginBottom: spacing.xs }}>
         {label}
       </AppText>
       {loading ? (
         <ActivityIndicator size="small" color={accentColor} />
       ) : (
-        <AppText size={18} weight="700" color={accentColor}>
+        <AppText variant="heading" color={accentColor}>
           {value}
         </AppText>
       )}
@@ -173,52 +180,48 @@ function MarkPaymentModal({
   const canSubmit = amountPaid.trim().length > 0 && parseFloat(amountPaid) > 0;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalSheet}>
-          <AppText size={18} weight="700" style={{ marginBottom: 6 }}>
-            Record Payment
-          </AppText>
-          {record && (
-            <AppText size={13} color={C.text2} style={{ marginBottom: 20 }}>
-              {record.student_name ?? `Enrollment #${record.enrollment_id}`}
-              {' · '}
-              {formatMonth(record.month)}
-            </AppText>
-          )}
-          <View style={{ gap: 16 }}>
-            <AppInput
-              label="Amount Paid (₹) *"
-              placeholder="0"
-              value={amountPaid}
-              onChangeText={setAmountPaid}
-              keyboardType="decimal-pad"
-            />
-            <AppInput
-              label="Reference (optional)"
-              placeholder="UPI ref, cheque no., etc."
-              value={reference}
-              onChangeText={setReference}
-            />
-          </View>
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 24 }}>
-            <AppButton
-              label="Cancel"
-              onPress={onClose}
-              variant="secondary"
-              style={{ flex: 1 }}
-            />
-            <AppButton
-              label="Confirm"
-              onPress={handleSubmit}
-              loading={loading}
-              disabled={!canSubmit}
-              style={{ flex: 1 }}
-            />
-          </View>
-        </View>
+    <BottomSheetModal visible={visible} onClose={onClose}>
+      <AppText variant="heading" style={{ marginBottom: spacing.xs }}>
+        Record Payment
+      </AppText>
+      {record && (
+        <AppText variant="caption" color={C.text2} style={{ marginBottom: spacing.xl }}>
+          {record.student_name ?? `Enrollment #${record.enrollment_id}`}
+          {' · '}
+          {formatMonth(record.month)}
+        </AppText>
+      )}
+      <View style={{ gap: spacing.lg }}>
+        <AppInput
+          label="Amount Paid (₹) *"
+          placeholder="0"
+          value={amountPaid}
+          onChangeText={setAmountPaid}
+          keyboardType="decimal-pad"
+        />
+        <AppInput
+          label="Reference (optional)"
+          placeholder="UPI ref, cheque no., etc."
+          value={reference}
+          onChangeText={setReference}
+        />
       </View>
-    </Modal>
+      <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl }}>
+        <AppButton
+          label="Cancel"
+          onPress={onClose}
+          variant="secondary"
+          style={{ flex: 1 }}
+        />
+        <AppButton
+          label="Confirm"
+          onPress={handleSubmit}
+          loading={loading}
+          disabled={!canSubmit}
+          style={{ flex: 1 }}
+        />
+      </View>
+    </BottomSheetModal>
   );
 }
 
@@ -258,37 +261,33 @@ function FeeSetupModal({
   const canSubmit = amount.trim().length > 0 && parseFloat(amount) > 0;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalSheet}>
-          <AppText size={18} weight="700" style={{ marginBottom: 20 }}>
-            Set Monthly Fee
-          </AppText>
-          <AppInput
-            label="Monthly Amount (₹) *"
-            placeholder="e.g. 2000"
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="decimal-pad"
-          />
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 24 }}>
-            <AppButton
-              label="Cancel"
-              onPress={() => { setAmount(''); onClose(); }}
-              variant="secondary"
-              style={{ flex: 1 }}
-            />
-            <AppButton
-              label="Save"
-              onPress={handleSubmit}
-              loading={loading}
-              disabled={!canSubmit}
-              style={{ flex: 1 }}
-            />
-          </View>
-        </View>
+    <BottomSheetModal visible={visible} onClose={onClose}>
+      <AppText variant="heading" style={{ marginBottom: spacing.xl }}>
+        Set Monthly Fee
+      </AppText>
+      <AppInput
+        label="Monthly Amount (₹) *"
+        placeholder="e.g. 2000"
+        value={amount}
+        onChangeText={setAmount}
+        keyboardType="decimal-pad"
+      />
+      <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl }}>
+        <AppButton
+          label="Cancel"
+          onPress={() => { setAmount(''); onClose(); }}
+          variant="secondary"
+          style={{ flex: 1 }}
+        />
+        <AppButton
+          label="Save"
+          onPress={handleSubmit}
+          loading={loading}
+          disabled={!canSubmit}
+          style={{ flex: 1 }}
+        />
       </View>
-    </Modal>
+    </BottomSheetModal>
   );
 }
 
@@ -316,24 +315,22 @@ function FeeRecordCard({
     <AppCard style={styles.recordCard}>
       {/* Name + status chip */}
       <View style={styles.recordTop}>
-        <AppText size={14} weight="600" style={{ flex: 1 }} numberOfLines={1}>
+        <AppText variant="body" weight="600" style={{ flex: 1 }} numberOfLines={1}>
           {displayName}
         </AppText>
-        <View style={[styles.statusChip, { backgroundColor: statusColor + '22' }]}>
-          <AppText size={11} weight="600" color={statusColor}>{statusLabel}</AppText>
-        </View>
+        <StatusChip label={statusLabel} color={statusColor} />
       </View>
 
       {/* Amounts row */}
       <View style={styles.amountsRow}>
         <View>
-          <AppText size={11} color={C.text2}>Due</AppText>
-          <AppText size={14} weight="600">{fmtAmount(record.amount_due)}</AppText>
+          <AppText variant="micro" color={C.text2}>Due</AppText>
+          <AppText variant="body" weight="600">{fmtAmount(record.amount_due)}</AppText>
         </View>
         <View>
-          <AppText size={11} color={C.text2}>Paid</AppText>
+          <AppText variant="micro" color={C.text2}>Paid</AppText>
           <AppText
-            size={14}
+            variant="body"
             weight="600"
             color={record.amount_paid > 0 ? C.success : C.text2}
           >
@@ -345,31 +342,36 @@ function FeeRecordCard({
       {/* Actions (only when not fully paid) */}
       {!isPaid && (
         <View style={styles.recordActions}>
-          <Pressable
+          <Touchable
+            haptic
             onPress={() => onPay(record)}
+            accessibilityRole="button"
+            accessibilityLabel={`Record payment for ${displayName}`}
             style={[
               styles.actionBtn,
-              { backgroundColor: C.secondary + '22', borderColor: C.secondary + '44' },
+              { backgroundColor: withOpacity(C.secondary), borderColor: withOpacity(C.secondary, 'strong') },
             ]}
           >
-            <AppText size={12} weight="600" color={C.secondary}>Pay</AppText>
-          </Pressable>
-          <Pressable
+            <AppText variant="caption" weight="600" color={C.secondary}>Pay</AppText>
+          </Touchable>
+          <Touchable
             onPress={() => onRemind(record.id)}
             disabled={reminding}
+            accessibilityRole="button"
+            accessibilityLabel={`Send fee reminder to ${displayName}`}
             style={[
               styles.actionBtn,
               {
-                backgroundColor: '#25D36622',
-                borderColor: '#25D36644',
+                backgroundColor: withOpacity(C.whatsapp),
+                borderColor: withOpacity(C.whatsapp, 'strong'),
                 opacity: reminding ? 0.5 : 1,
               },
             ]}
           >
-            <AppText size={12} weight="600" color="#25D366">
+            <AppText variant="caption" weight="600" color={C.whatsapp}>
               {reminding ? 'Sending…' : '🔔 Remind'}
             </AppText>
-          </Pressable>
+          </Touchable>
         </View>
       )}
     </AppCard>
@@ -501,7 +503,8 @@ export default function FeesScreen() {
     setRemindingIds(prev => new Set([...prev, recordId]));
     try {
       await sendFeeReminder(recordId);
-      Alert.alert('Sent', 'Reminder sent successfully!');
+      haptics.success();
+      toastEmitter.emit('Reminder sent', 'success');
     } catch {
       Alert.alert('Error', 'Failed to send reminder. Please try again.');
     } finally {
@@ -515,10 +518,13 @@ export default function FeesScreen() {
 
   const handlePaymentSuccess = (updated: FeeRecord) => {
     setRecords(prev => prev.map(r => (r.id === updated.id ? { ...r, ...updated } : r)));
+    haptics.success();
+    toastEmitter.emit('Payment recorded', 'success');
     loadDashboard();
   };
 
   const handleSetupSuccess = () => {
+    toastEmitter.emit('Monthly fee saved', 'success');
     loadStructure();
     loadRecords();
     loadDashboard();
@@ -536,21 +542,25 @@ export default function FeesScreen() {
     <View>
       {/* Month Picker */}
       <View style={styles.monthPicker}>
-        <Pressable
+        <Touchable
           onPress={() => setMonth(prevMonth(month))}
           style={styles.arrowBtn}
           hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Previous month"
         >
           <AppText size={24} color={C.primary} weight="600">‹</AppText>
-        </Pressable>
-        <AppText size={16} weight="600">{formatMonth(month)}</AppText>
-        <Pressable
+        </Touchable>
+        <AppText variant="subheading">{formatMonth(month)}</AppText>
+        <Touchable
           onPress={() => setMonth(nextMonth(month))}
           style={styles.arrowBtn}
           hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Next month"
         >
           <AppText size={24} color={C.primary} weight="600">›</AppText>
-        </Pressable>
+        </Touchable>
       </View>
 
       {/* Summary Cards — 2×2 grid */}
@@ -594,22 +604,12 @@ export default function FeesScreen() {
           contentContainerStyle={styles.filterContent}
         >
           {batches.map(b => (
-            <Pressable
+            <FilterChip
               key={b.id}
+              label={b.name}
+              active={selectedBatchId === b.id}
               onPress={() => setSelectedBatchId(b.id)}
-              style={[
-                styles.filterChip,
-                selectedBatchId === b.id && styles.filterChipActive,
-              ]}
-            >
-              <AppText
-                size={13}
-                color={selectedBatchId === b.id ? '#000' : C.text}
-                weight={selectedBatchId === b.id ? '600' : '400'}
-              >
-                {b.name}
-              </AppText>
-            </Pressable>
+            />
           ))}
         </ScrollView>
       )}
@@ -618,10 +618,10 @@ export default function FeesScreen() {
       {batches.length === 0 && !dashLoading && (
         <View style={styles.empty}>
           <AppText size={32}>💰</AppText>
-          <AppText size={16} weight="600" style={{ marginTop: 12 }}>
+          <AppText variant="subheading" style={{ marginTop: spacing.md }}>
             No active batches
           </AppText>
-          <AppText size={13} color={C.text2} style={{ marginTop: 4 }}>
+          <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.xs }}>
             Create a batch first, then set up fees here.
           </AppText>
         </View>
@@ -639,7 +639,7 @@ export default function FeesScreen() {
           ) : noStructure ? (
             /* No fee structure: show setup button */
             <View style={styles.noStructure}>
-              <AppText size={14} color={C.text2} style={{ marginBottom: 14 }}>
+              <AppText variant="body" color={C.text2} style={{ marginBottom: 14 }}>
                 No monthly fee set for this batch.
               </AppText>
               <AppButton
@@ -652,23 +652,24 @@ export default function FeesScreen() {
             /* Has structure: show bar + optional generate button */
             <View style={styles.structureBar}>
               <View style={styles.structureChip}>
-                <AppText size={12} color={C.text}>
+                <AppText variant="caption" color={C.text}>
                   Monthly Fee: {structure ? fmtAmount(structure.monthly_amount) : '—'}
                 </AppText>
               </View>
-              <Pressable onPress={() => setSetupVisible(true)} hitSlop={8}>
-                <AppText size={12} color={C.primary} weight="600">Edit</AppText>
-              </Pressable>
+              <Touchable onPress={() => setSetupVisible(true)} hitSlop={8} accessibilityRole="button">
+                <AppText variant="caption" color={C.primary} weight="600">Edit</AppText>
+              </Touchable>
               {records.length === 0 && !recordsLoading && (
-                <Pressable
+                <Touchable
                   onPress={handleGenerate}
                   disabled={generating}
                   style={[styles.generateBtn, { opacity: generating ? 0.6 : 1 }]}
+                  accessibilityRole="button"
                 >
-                  <AppText size={12} weight="600" color={C.secondary}>
+                  <AppText variant="caption" weight="600" color={C.secondary}>
                     {generating ? 'Generating…' : '+ Generate Records'}
                   </AppText>
-                </Pressable>
+                </Touchable>
               )}
             </View>
           )}
@@ -678,23 +679,17 @@ export default function FeesScreen() {
       {/* Fee records section header */}
       {records.length > 0 && (
         <View style={styles.recordsHeader}>
-          <AppText size={13} color={C.text2} weight="600">
+          <AppText variant="caption" color={C.text2} weight="600">
             Fee Records
           </AppText>
-          <AppText size={13} color={C.text2}>
+          <AppText variant="caption" color={C.text2}>
             {records.length} student{records.length !== 1 ? 's' : ''}
           </AppText>
         </View>
       )}
 
-      {/* Records loading indicator */}
-      {recordsLoading && (
-        <ActivityIndicator
-          size="small"
-          color={C.primary}
-          style={{ marginVertical: 20 }}
-        />
-      )}
+      {/* Records loading skeleton */}
+      {recordsLoading && <SkeletonList count={3} />}
     </View>
   );
 
@@ -702,19 +697,21 @@ export default function FeesScreen() {
     <SafeAreaView style={styles.safe}>
       {/* Screen Header */}
       <View style={styles.screenHeader}>
-        <AppText size={22} weight="700">Fee Management</AppText>
+        <AppText variant="heading">Fee Management</AppText>
       </View>
 
       <FlatList<FeeRecordRow>
         data={records}
         keyExtractor={item => item.id.toString()}
-        renderItem={({ item }) => (
-          <FeeRecordCard
-            record={item}
-            reminding={remindingIds.has(item.id)}
-            onPay={setPayRecord}
-            onRemind={handleRemind}
-          />
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 40).springify().damping(18)}>
+            <FeeRecordCard
+              record={item}
+              reminding={remindingIds.has(item.id)}
+              onPay={setPayRecord}
+              onRemind={handleRemind}
+            />
+          </Animated.View>
         )}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
@@ -730,10 +727,10 @@ export default function FeesScreen() {
           !recordsLoading && selectedBatchId !== null && !noStructure && records.length === 0 ? (
             <View style={styles.emptyRecords}>
               <AppText size={28}>📋</AppText>
-              <AppText size={15} weight="600" style={{ marginTop: 10 }}>
+              <AppText variant="subheading" style={{ marginTop: 10 }}>
                 No fee records
               </AppText>
-              <AppText size={13} color={C.text2} style={{ marginTop: 4 }}>
+              <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.xs }}>
                 Generate records for {formatMonth(month)}
               </AppText>
             </View>
@@ -763,27 +760,27 @@ export default function FeesScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
   screenHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
   },
   monthPicker: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 24,
-    marginHorizontal: 16,
-    marginTop: 4,
-    marginBottom: 16,
-    paddingVertical: 12,
+    gap: spacing.xl,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
+    paddingVertical: spacing.md,
     backgroundColor: C.surface,
     borderRadius: radius.md,
   },
-  arrowBtn: { padding: 4 },
+  arrowBtn: { padding: spacing.xs },
   summaryGrid: {
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     gap: 10,
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -804,30 +801,23 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
   },
-  filterRow: { marginBottom: 12, maxHeight: 46 },
+  filterRow: { marginBottom: spacing.md, flexGrow: 0 },
   filterContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: C.surface2,
-    borderRadius: radius.lg,
-  },
-  filterChipActive: { backgroundColor: C.primary },
   noStructure: {
     alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 16,
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.lg,
   },
   structureBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     gap: 10,
     flexWrap: 'wrap',
   },
@@ -838,38 +828,33 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   generateBtn: {
-    backgroundColor: C.secondary + '22',
+    backgroundColor: withOpacity(C.secondary),
     borderWidth: 1,
-    borderColor: C.secondary + '44',
+    borderColor: withOpacity(C.secondary, 'strong'),
     borderRadius: radius.sm,
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
   },
   recordsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
   },
-  list: { paddingHorizontal: 16, paddingBottom: 32 },
-  recordCard: { marginBottom: 8 },
+  list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
+  recordCard: { marginBottom: spacing.sm },
   recordTop: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     marginBottom: 10,
   },
-  statusChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
-  },
   amountsRow: {
     flexDirection: 'row',
     gap: 28,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   recordActions: {
     flexDirection: 'row',
@@ -877,31 +862,20 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
-    height: 36,
+    minHeight: 36,
     borderRadius: radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 6,
   },
   empty: {
     alignItems: 'center',
     paddingTop: 60,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
   },
   emptyRecords: {
     alignItems: 'center',
-    paddingTop: 40,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: C.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    padding: 24,
-    paddingBottom: 40,
+    paddingTop: spacing.xxxl,
   },
 });

@@ -3,19 +3,26 @@ import {
   View,
   FlatList,
   StyleSheet,
-  Pressable,
-  TextInput,
-  Modal,
   ScrollView,
   Alert,
   RefreshControl,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText } from '../../components/AppText';
 import { AppCard } from '../../components/AppCard';
 import { AppButton } from '../../components/AppButton';
 import { AppInput } from '../../components/AppInput';
-import C, { radius } from '../../constants/colors';
+import { FilterChip } from '../../components/FilterChip';
+import { StatusChip } from '../../components/StatusChip';
+import { BottomSheetModal } from '../../components/BottomSheetModal';
+import { Touchable } from '../../components/Touchable';
+import { SkeletonList } from '../../components/Skeleton';
+import { ErrorRetry } from '../../components/ErrorRetry';
+import C from '../../constants/colors';
+import { spacing } from '../../constants/spacing';
+import { toastEmitter } from '../../lib/toastEmitter';
+import { haptics } from '../../lib/haptics';
 import {
   getBatches,
   getEnrollmentsByBatch,
@@ -92,6 +99,9 @@ function AddStudentModal({
   const [dueDay, setDueDay] = useState('1');
   const [firstMonthAmount, setFirstMonthAmount] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+
+  const clearErr = (key: string) => setErrors(e => (e[key] ? { ...e, [key]: undefined } : e));
 
   const reset = () => {
     setSelectedBatchId(null);
@@ -100,10 +110,26 @@ function AddStudentModal({
     setParentPhone('');
     setDueDay('1');
     setFirstMonthAmount('');
+    setErrors({});
+  };
+
+  const validate = (): boolean => {
+    const next: Record<string, string | undefined> = {};
+    if (selectedBatchId == null) next.batch = 'Please select a batch.';
+    if (!studentName.trim()) next.studentName = 'Student name is required.';
+    if (parentPhone && parentPhone.length !== 10) next.parentPhone = 'Enter a 10-digit phone number.';
+    const day = parseInt(dueDay, 10);
+    if (isNaN(day) || day < 1 || day > 31) next.dueDay = 'Due day must be between 1 and 31.';
+    if (firstMonthAmount.trim()) {
+      const amt = parseFloat(firstMonthAmount);
+      if (isNaN(amt) || amt < 0) next.firstMonthAmount = 'Enter a valid amount.';
+    }
+    setErrors(next);
+    return Object.keys(next).every(k => !next[k]);
   };
 
   const handleAdd = async () => {
-    if (selectedBatchId == null || !studentName.trim()) return;
+    if (!validate() || selectedBatchId == null) return;
     setLoading(true);
     try {
       await inviteStudent({
@@ -115,6 +141,8 @@ function AddStudentModal({
         first_month_amount: parseFloat(firstMonthAmount) || 0,
       });
       reset();
+      haptics.success();
+      toastEmitter.emit('Student added', 'success');
       onAdded();
       onClose();
     } finally {
@@ -123,101 +151,94 @@ function AddStudentModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalSheet}>
-          <AppText size={18} weight="700" style={{ marginBottom: 20 }}>
-            Add Student
-          </AppText>
-          <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
-            <View style={{ gap: 16 }}>
-              {/* Batch Selector */}
-              <View>
-                <AppText size={13} color={C.text2} style={{ marginBottom: 8 }}>
-                  Select Batch *
-                </AppText>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={{ marginBottom: 4 }}
-                >
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    {batches.map(b => (
-                      <Pressable
-                        key={b.id}
-                        onPress={() => setSelectedBatchId(b.id)}
-                        style={[
-                          styles.batchChip,
-                          selectedBatchId === b.id && styles.batchChipActive,
-                        ]}
-                      >
-                        <AppText
-                          size={13}
-                          color={selectedBatchId === b.id ? '#000' : C.text}
-                          weight={selectedBatchId === b.id ? '600' : '400'}
-                        >
-                          {b.name}
-                        </AppText>
-                      </Pressable>
-                    ))}
-                  </View>
-                </ScrollView>
+    <BottomSheetModal visible={visible} onClose={onClose}>
+      <AppText variant="heading" style={{ marginBottom: spacing.xl }}>
+        Add Student
+      </AppText>
+      <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+        <View style={{ gap: spacing.lg }}>
+          {/* Batch Selector */}
+          <View>
+            <AppText variant="caption" color={C.text2} style={{ marginBottom: spacing.sm }}>
+              Select Batch *
+            </AppText>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginBottom: spacing.xs }}
+            >
+              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                {batches.map(b => (
+                  <FilterChip
+                    key={b.id}
+                    label={b.name}
+                    active={selectedBatchId === b.id}
+                    onPress={() => { setSelectedBatchId(b.id); clearErr('batch'); }}
+                  />
+                ))}
               </View>
-
-              <AppInput
-                label="Student Name *"
-                placeholder="Full name"
-                value={studentName}
-                onChangeText={setStudentName}
-              />
-              <AppInput
-                label="Parent Name"
-                placeholder="Full name"
-                value={parentName}
-                onChangeText={setParentName}
-              />
-              <AppInput
-                label="Parent Phone"
-                placeholder="10-digit number"
-                value={parentPhone}
-                onChangeText={v => setParentPhone(v.replace(/\D/g, '').slice(0, 10))}
-                keyboardType="phone-pad"
-              />
-              <AppInput
-                label="Fee Due Day"
-                placeholder="e.g. 5"
-                value={dueDay}
-                onChangeText={setDueDay}
-                keyboardType="number-pad"
-              />
-              <AppInput
-                label="First Month Amount (₹)"
-                placeholder="e.g. 2000"
-                value={firstMonthAmount}
-                onChangeText={setFirstMonthAmount}
-                keyboardType="decimal-pad"
-              />
-            </View>
-          </ScrollView>
-
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
-            <AppButton
-              label="Cancel"
-              onPress={() => { reset(); onClose(); }}
-              variant="secondary"
-              style={{ flex: 1 }}
-            />
-            <AppButton
-              label="Add"
-              onPress={handleAdd}
-              loading={loading}
-              disabled={selectedBatchId == null || !studentName.trim()}
-              style={{ flex: 1 }}
-            />
+            </ScrollView>
+            {errors.batch ? (
+              <AppText variant="caption" color={C.error}>{errors.batch}</AppText>
+            ) : null}
           </View>
+
+          <AppInput
+            label="Student Name *"
+            placeholder="Full name"
+            value={studentName}
+            onChangeText={t => { setStudentName(t); clearErr('studentName'); }}
+            error={errors.studentName}
+          />
+          <AppInput
+            label="Parent Name"
+            placeholder="Full name"
+            value={parentName}
+            onChangeText={setParentName}
+          />
+          <AppInput
+            label="Parent Phone"
+            placeholder="10-digit number"
+            value={parentPhone}
+            onChangeText={v => { setParentPhone(v.replace(/\D/g, '').slice(0, 10)); clearErr('parentPhone'); }}
+            keyboardType="phone-pad"
+            error={errors.parentPhone}
+          />
+          <AppInput
+            label="Fee Due Day"
+            placeholder="e.g. 5"
+            value={dueDay}
+            onChangeText={t => { setDueDay(t); clearErr('dueDay'); }}
+            keyboardType="number-pad"
+            error={errors.dueDay}
+          />
+          <AppInput
+            label="First Month Amount (₹)"
+            placeholder="e.g. 2000"
+            value={firstMonthAmount}
+            onChangeText={t => { setFirstMonthAmount(t); clearErr('firstMonthAmount'); }}
+            keyboardType="decimal-pad"
+            error={errors.firstMonthAmount}
+          />
         </View>
+      </ScrollView>
+
+      <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.xl }}>
+        <AppButton
+          label="Cancel"
+          onPress={() => { reset(); onClose(); }}
+          variant="secondary"
+          style={{ flex: 1 }}
+        />
+        <AppButton
+          label="Add"
+          onPress={handleAdd}
+          loading={loading}
+          disabled={selectedBatchId == null || !studentName.trim()}
+          style={{ flex: 1 }}
+        />
       </View>
-    </Modal>
+    </BottomSheetModal>
   );
 }
 
@@ -250,32 +271,33 @@ function EnrollmentRow({
     <AppCard>
       <View style={styles.rowTop}>
         <View style={{ flex: 1 }}>
-          <AppText size={15} weight="600">{displayName}</AppText>
-          <AppText size={13} color={C.text2} style={{ marginTop: 2 }}>
+          <AppText variant="subheading">{displayName}</AppText>
+          <AppText variant="caption" color={C.text2} style={{ marginTop: 2 }}>
             {item.batchName}
           </AppText>
         </View>
-        <View style={[styles.statusChip, { backgroundColor: statusColor + '22' }]}>
-          <AppText size={11} weight="600" color={statusColor}>
-            {statusLabel}
-          </AppText>
-        </View>
+        <StatusChip label={statusLabel} color={statusColor} />
       </View>
 
       <View style={styles.rowMeta}>
         {item.due_day != null && (
-          <AppText size={12} color={C.text2}>
+          <AppText variant="caption" color={C.text2}>
             Due: {item.due_day}{ordinal(item.due_day)}
           </AppText>
         )}
         {item.first_month_amount != null && item.first_month_amount > 0 && (
-          <AppText size={12} color={C.text2}>
+          <AppText variant="caption" color={C.text2}>
             ₹{Number(item.first_month_amount).toLocaleString('en-IN')}
           </AppText>
         )}
-        <Pressable onPress={confirmRemove} hitSlop={8}>
-          <AppText size={12} color={C.error}>Remove</AppText>
-        </Pressable>
+        <Touchable
+          onPress={confirmRemove}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Remove ${displayName}`}
+        >
+          <AppText variant="caption" color={C.error}>Remove</AppText>
+        </Touchable>
       </View>
     </AppCard>
   );
@@ -286,6 +308,8 @@ function EnrollmentRow({
 export default function StudentsScreen() {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [enrollments, setEnrollments] = useState<EnrollmentRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<number | 'all'>('all');
   const [search, setSearch] = useState('');
@@ -314,8 +338,11 @@ export default function StudentsScreen() {
         })
       );
       setEnrollments(allEnrollments);
+      setError(false);
     } catch {
-      // silently ignore — user can pull-to-refresh
+      setError(true);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -327,10 +354,16 @@ export default function StudentsScreen() {
     setRefreshing(false);
   };
 
+  const onRetry = () => {
+    setLoading(true);
+    load();
+  };
+
   const handleRemove = async (id: number) => {
     try {
       await removeEnrollment(id);
       setEnrollments(prev => prev.filter(e => e.id !== id));
+      toastEmitter.emit('Student removed', 'info');
     } catch {
       Alert.alert('Error', 'Failed to remove student. Please try again.');
     }
@@ -351,22 +384,25 @@ export default function StudentsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <AppText size={22} weight="700">Students</AppText>
-          <AppText size={13} color={C.text2}>
+          <AppText variant="heading">Students</AppText>
+          <AppText variant="caption" color={C.text2}>
             {filtered.length} student{filtered.length !== 1 ? 's' : ''}
           </AppText>
         </View>
-        <Pressable onPress={() => setAddVisible(true)} style={styles.addBtn}>
+        <Touchable
+          onPress={() => setAddVisible(true)}
+          style={styles.addBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Add student"
+        >
           <AppText size={28} color={C.primary}>+</AppText>
-        </Pressable>
+        </Touchable>
       </View>
 
       {/* Search */}
       <View style={styles.searchBar}>
-        <TextInput
-          style={styles.searchInput}
+        <AppInput
           placeholder="Search students..."
-          placeholderTextColor={C.text3}
           value={search}
           onChangeText={setSearch}
         />
@@ -379,62 +415,56 @@ export default function StudentsScreen() {
         style={styles.filterRow}
         contentContainerStyle={styles.filterContent}
       >
-        <Pressable
+        <FilterChip
+          label="All Batches"
+          active={selectedBatch === 'all'}
           onPress={() => setSelectedBatch('all')}
-          style={[styles.filterChip, selectedBatch === 'all' && styles.filterChipActive]}
-        >
-          <AppText
-            size={13}
-            color={selectedBatch === 'all' ? '#000' : C.text}
-            weight={selectedBatch === 'all' ? '600' : '400'}
-          >
-            All Batches
-          </AppText>
-        </Pressable>
+        />
         {batches.map(b => (
-          <Pressable
+          <FilterChip
             key={b.id}
+            label={b.name}
+            active={selectedBatch === b.id}
             onPress={() => setSelectedBatch(b.id)}
-            style={[styles.filterChip, selectedBatch === b.id && styles.filterChipActive]}
-          >
-            <AppText
-              size={13}
-              color={selectedBatch === b.id ? '#000' : C.text}
-              weight={selectedBatch === b.id ? '600' : '400'}
-            >
-              {b.name}
-            </AppText>
-          </Pressable>
+          />
         ))}
       </ScrollView>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={item => item.id.toString()}
-        renderItem={({ item }) => (
-          <EnrollmentRow item={item} onRemove={handleRemove} />
-        )}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={C.primary}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <AppText size={36}>👨‍🎓</AppText>
-            <AppText size={16} weight="600" style={{ marginTop: 12 }}>
-              No students yet
-            </AppText>
-            <AppText size={14} color={C.text2} style={{ marginTop: 4 }}>
-              {search ? 'No students match your search.' : 'Add students to your batches'}
-            </AppText>
-          </View>
-        }
-      />
+      {loading ? (
+        <SkeletonList count={5} />
+      ) : error && enrollments.length === 0 ? (
+        <ErrorRetry onRetry={onRetry} />
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={item => item.id.toString()}
+          renderItem={({ item, index }) => (
+            <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 40).springify().damping(18)}>
+              <EnrollmentRow item={item} onRemove={handleRemove} />
+            </Animated.View>
+          )}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={C.primary}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <AppText size={36}>👨‍🎓</AppText>
+              <AppText variant="subheading" style={{ marginTop: spacing.md }}>
+                No students yet
+              </AppText>
+              <AppText variant="body" color={C.text2} style={{ marginTop: spacing.xs }}>
+                {search ? 'No students match your search.' : 'Add students to your batches'}
+              </AppText>
+            </View>
+          }
+        />
+      )}
 
       <AddStudentModal
         visible={addVisible}
@@ -454,67 +484,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
   },
-  addBtn: { padding: 8 },
-  searchBar: { paddingHorizontal: 16, paddingBottom: 8 },
-  searchInput: {
-    backgroundColor: C.surface2,
-    borderRadius: radius.md,
-    paddingHorizontal: 14,
-    height: 42,
-    color: C.text,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: C.outline,
-  },
-  filterRow: { marginBottom: 8, maxHeight: 46 },
+  addBtn: { padding: spacing.sm },
+  searchBar: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  filterRow: { marginBottom: spacing.sm, flexGrow: 0 },
   filterContent: {
-    paddingHorizontal: 16,
-    gap: 8,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: C.surface2,
-    borderRadius: radius.lg,
-  },
-  filterChipActive: { backgroundColor: C.primary },
-  list: { paddingHorizontal: 16, paddingBottom: 32, gap: 10 },
+  list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl, gap: 10 },
   rowTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 8,
+    gap: spacing.md,
+    marginBottom: spacing.sm,
   },
-  statusChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
-  },
-  rowMeta: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center' },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: C.surface,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
-    padding: 24,
-    paddingBottom: 40,
-  },
-  batchChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: C.surface2,
-    borderRadius: radius.lg,
-  },
-  batchChipActive: { backgroundColor: C.primary },
+  rowMeta: { flexDirection: 'row', gap: spacing.lg, flexWrap: 'wrap', alignItems: 'center' },
   empty: { alignItems: 'center', paddingTop: 80 },
 });

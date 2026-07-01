@@ -123,10 +123,11 @@ const styles = StyleSheet.create({
   wrapper: { gap: 6 },
   label: { fontSize: 13, color: C.text2, fontWeight: '500' },
   field: {
-    height: 48,
+    minHeight: 48,
     backgroundColor: C.surface2,
     borderRadius: radius.md,
     paddingHorizontal: 14,
+    paddingVertical: 12,
     borderWidth: 1,
     borderColor: C.outline,
     flexDirection: 'row',

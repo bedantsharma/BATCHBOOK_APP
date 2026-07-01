@@ -51,11 +51,12 @@ export function AppButton({
 
 const styles = StyleSheet.create({
   base: {
-    height: 48,
+    minHeight: 48,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
+    paddingVertical: 8,
   },
   label: {
     fontSize: 15,

@@ -862,11 +862,12 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
-    height: 36,
+    minHeight: 36,
     borderRadius: radius.sm,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 6,
   },
   empty: {
     alignItems: 'center',

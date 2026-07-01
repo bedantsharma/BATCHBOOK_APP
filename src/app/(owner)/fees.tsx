@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
 import { AppCard } from '../../components/AppCard';
 import { AppButton } from '../../components/AppButton';
@@ -32,6 +34,7 @@ import {
   generateMonthlyRecords,
   markPayment,
   sendFeeReminder,
+  getRazorpayPayoutStatus,
   type Batch,
   type FeeRecord,
 } from '../../services/ownerService';
@@ -103,6 +106,43 @@ const FEE_STATUS_LABEL: Record<string, string> = {
   PENDING: 'Unpaid',
   NOT_PAID: 'Unpaid',
 };
+
+// ── Connect Payouts Banner ───────────────────────────────────────────────────
+
+function ConnectPayoutsBanner({
+  onConnect,
+  onDismiss,
+}: {
+  onConnect: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <AppCard style={{ ...styles.banner, borderColor: withOpacity(C.warning, 'strong') }}>
+      <MaterialIcons name="warning" size={18} color={C.warning} style={{ marginTop: 1 }} />
+      <AppText variant="caption" color={C.text} style={styles.bannerText}>
+        Connect your Razorpay account to start collecting fees online.
+      </AppText>
+      <Touchable
+        haptic
+        onPress={onConnect}
+        accessibilityRole="button"
+        accessibilityLabel="Connect Payouts"
+        hitSlop={8}
+      >
+        <AppText variant="caption" weight="700" color={C.warning}>Connect</AppText>
+      </Touchable>
+      <Touchable
+        onPress={onDismiss}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss"
+        hitSlop={8}
+        style={{ marginLeft: spacing.sm }}
+      >
+        <MaterialIcons name="close" size={18} color={C.text2} />
+      </Touchable>
+    </AppCard>
+  );
+}
 
 // ── Summary Card ─────────────────────────────────────────────────────────────
 
@@ -381,6 +421,7 @@ function FeeRecordCard({
 // ── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function FeesScreen() {
+  const router = useRouter();
   const [month, setMonth] = useState<string>(() => new Date().toISOString().slice(0, 7));
   const [batches, setBatches] = useState<Batch[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
@@ -401,6 +442,10 @@ export default function FeesScreen() {
   const [payRecord, setPayRecord] = useState<FeeRecordRow | null>(null);
   const [setupVisible, setSetupVisible] = useState(false);
   const [remindingIds, setRemindingIds] = useState<Set<number>>(new Set());
+
+  // Assume connected until checked, to avoid a flash of the banner.
+  const [payoutsConnected, setPayoutsConnected] = useState(true);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   // ── Data loaders ────────────────────────────────────────────────────────────
 
@@ -484,6 +529,12 @@ export default function FeesScreen() {
   useEffect(() => { loadStructure(); }, [loadStructure]);
   useEffect(() => { loadRecords(); }, [loadRecords]);
 
+  useEffect(() => {
+    getRazorpayPayoutStatus()
+      .then(data => setPayoutsConnected(data.status === 'CONNECTED'))
+      .catch(() => {}); // fail silent — banner just won't show
+  }, []);
+
   // ── Actions ──────────────────────────────────────────────────────────────────
 
   const handleGenerate = async () => {
@@ -562,6 +613,13 @@ export default function FeesScreen() {
           <AppText size={24} color={C.primary} weight="600">›</AppText>
         </Touchable>
       </View>
+
+      {!payoutsConnected && !bannerDismissed && (
+        <ConnectPayoutsBanner
+          onConnect={() => router.push('/(owner)/settings' as any)}
+          onDismiss={() => setBannerDismissed(true)}
+        />
+      )}
 
       {/* Summary Cards — 2×2 grid */}
       <View style={styles.summaryGrid}>
@@ -777,6 +835,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   arrowBtn: { padding: spacing.xs },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    padding: spacing.md,
+  },
+  bannerText: { flex: 1 },
   summaryGrid: {
     paddingHorizontal: spacing.lg,
     gap: 10,

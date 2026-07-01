@@ -77,6 +77,13 @@ export default function OwnerLayout() {
         }}
       />
       <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color }) => <TabIcon name="settings" color={color as string} />,
+        }}
+      />
+      <Tabs.Screen
         name="setup"
         options={{ href: null }}
       />

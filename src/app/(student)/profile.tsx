@@ -53,21 +53,21 @@ export default function ProfileScreen() {
       {/* Info cards */}
       <AppCard style={{ gap: spacing.lg, marginBottom: spacing.md }}>
         {profile?.phone ? (
-          <View style={s.infoRow}>
+          <View style={s.infoRow} accessible accessibilityLabel={`Phone: ${profile.phone}`}>
             <MaterialIcons name="phone" size={18} color={C.text2} />
             <AppText variant="body" color={C.text2}>{profile.phone}</AppText>
           </View>
         ) : null}
 
         {profile?.subjects && profile.subjects.length > 0 ? (
-          <View style={s.infoRow}>
+          <View style={s.infoRow} accessible accessibilityLabel={`Subjects: ${profile.subjects.join(', ')}`}>
             <MaterialIcons name="school" size={18} color={C.text2} />
             <AppText variant="body" color={C.text2}>{profile.subjects.join(', ')}</AppText>
           </View>
         ) : null}
 
         {profile?.enrolledYear ? (
-          <View style={s.infoRow}>
+          <View style={s.infoRow} accessible accessibilityLabel={`Enrolled ${profile.enrolledYear}`}>
             <MaterialIcons name="calendar-today" size={18} color={C.text2} />
             <AppText variant="body" color={C.text2}>Enrolled {profile.enrolledYear}</AppText>
           </View>

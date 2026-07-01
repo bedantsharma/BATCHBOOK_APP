@@ -188,16 +188,42 @@ four features collapsed into a single manually-swipeable highlight strip — see
 ## Phase 5 — Accessibility (audit G8)
 *Goal: usable with a screen reader and large text; meets WCAG AA.*
 
-- [ ] Add `accessibilityLabel` + `accessibilityRole="button"` to every icon-only control (the "+" add
+- [x] Add `accessibilityLabel` + `accessibilityRole="button"` to every icon-only control (the "+" add
       buttons, month chevrons, expand carets).
-- [ ] Check contrast: `text3` (`rgba(255,255,255,0.55)`) on dark surfaces is borderline for small text —
+- [x] Check contrast: `text3` (`rgba(255,255,255,0.55)`) on dark surfaces is borderline for small text —
       bump opacity or reserve it for large/decorative text only. Target 4.5:1 for body copy.
-- [ ] Test with the OS font size cranked up; ensure layouts reflow without clipping (don't disable
+- [x] Test with the OS font size cranked up; ensure layouts reflow without clipping (don't disable
       `allowFontScaling`).
-- [ ] Confirm no status is conveyed by color alone (pair every colored status with a label/icon).
+- [x] Confirm no status is conveyed by color alone (pair every colored status with a label/icon).
 
 **Phase 5 done when:** VoiceOver/TalkBack can name every control, body text passes 4.5:1, and large
 type doesn't break layouts.
+
+✅ **Phase 5 complete (2026-07-01), with one verification gap.** Labeled the two remaining icon-only
+expand-caret toggles (attendance session header, test score card header); grouped the student
+profile's decorative icon+text rows into single accessibility elements. Re-ran the contrast script
+against the live `src/constants/colors.ts` values: `text3` measures 5.34–6.18:1 against every surface
+token (`bg` 6.18, `surface` 5.92, `surface2` 5.65, `surface3` 5.34), all comfortably above the 4.5:1 AA
+floor — no color change needed. `C.error` (`#CF6679`) as solid text is 5.20:1 on `bg` and 4.63:1 on
+`surface`, but drops to 4.26:1 on `surface2` and 3.88:1 on `surface3`; a full `grep -rn "C.error"
+src/app src/components` audit (40 matches across `C.success`/`C.warning`/`C.error`) confirmed every
+`color={C.error}`/`accentColor`/border usage either renders on `bg`/`surface` (via `AppCard`,
+`BottomSheetModal`, or screen background) or is paired with visible text on `surface2`/`surface3`
+(e.g. `AppInput`/`DateTimeField`'s red border always ships with an adjacent error-message `<Text>`), so
+the borderline cases are never the sole conveyor of meaning. Re-confirmed no color-only status:
+every `C.success`/`C.warning`/`C.error` usage is either inside `StatusChip(label, color)`, a
+`SummaryCard` with an explicit `label` prop, colored numeric/percentage text where the number itself
+is the label (e.g. schedule/home/tests attendance %), or paired with a text word (attendance's
+`PRESENT`/`ABSENT`, home's "Fee Due"/"Pay Now", students' "Remove") — no bare color-only usage found.
+Closed the remaining Dynamic Type clipping risk by swapping fixed `height` for `minHeight` on
+`AppButton`, `AppInput`, `DateTimeField`, and the fees Pay/Remind buttons — the same fix already
+applied to `FilterChip`. Verified with `tsc --noEmit` (clean). **Gap:** the manual OS-largest-font-size
+device/simulator walkthrough (Step 3) could not be performed in this environment — no Xcode
+(`xcodebuild`/`simctl` unavailable, only Command Line Tools installed) and no `adb`/Android tooling or
+connected device. The `AppText` line-height fix and the `minHeight` swap are code-verified and
+narrowly scoped, but the actual on-device reflow at max font scale is still unverified and should be
+done opportunistically on a real device/simulator before considering Phase 5 fully closed out in
+practice.
 
 ---
 

@@ -309,7 +309,13 @@ function StudentCard({ enrollment, scoreCache, onScoresCached }: StudentCardProp
   return (
     <AppCard style={styles.studentCard}>
       {/* Tappable header */}
-      <Touchable onPress={handleExpand} style={styles.cardHeader} accessibilityRole="button">
+      <Touchable
+        onPress={handleExpand}
+        style={styles.cardHeader}
+        accessibilityRole="button"
+        accessibilityLabel={`${expanded ? 'Collapse' : 'Expand'} scores for ${displayName}`}
+        accessibilityState={{ expanded }}
+      >
         <View style={{ flex: 1 }}>
           <AppText variant="subheading">
             {displayName}

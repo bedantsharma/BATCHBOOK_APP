@@ -248,7 +248,13 @@ function SessionCard({ session, enrollments }: SessionCardProps) {
   return (
     <AppCard style={styles.sessionCard}>
       {/* Tappable header: date, topic, summary chip, expand icon */}
-      <Touchable onPress={handleExpand} style={styles.sessionHeader} accessibilityRole="button">
+      <Touchable
+        onPress={handleExpand}
+        style={styles.sessionHeader}
+        accessibilityRole="button"
+        accessibilityLabel={`${expanded ? 'Collapse' : 'Expand'} ${formatDate(session.date)} session`}
+        accessibilityState={{ expanded }}
+      >
         <View style={{ flex: 1 }}>
           <AppText variant="body" weight="600">
             {formatDate(session.date)}

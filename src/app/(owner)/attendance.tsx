@@ -83,14 +83,25 @@ interface AttendanceSheetProps {
   onSaved: (rows: AttendanceRow[]) => void;
 }
 
+function presentIdsFrom(rows: AttendanceRow[]): Set<number> {
+  return new Set(rows.filter(r => r.status === 'PRESENT').map(r => r.enrollment_id));
+}
+
+// The session's roster (who appears, and the present/absent counts) must
+// come from `attendance` — the rows actually persisted for this session —
+// not from `enrollments`, the batch's *current* active-enrollment list.
+// Those two can diverge: attendance rows are frozen to whoever was actively
+// enrolled when the session was created, while `enrollments` keeps changing
+// as students join/leave the batch. Rendering off the live enrollment list
+// let an older session's roster silently drift from its actual attendance
+// records — wrong students, wrong checkmarks, counts that didn't add up to
+// the true class size (or even went negative). `enrollments` is only used
+// here to look up display names.
 function AttendanceSheet({ sessionId, enrollments, attendance, onSaved }: AttendanceSheetProps) {
-  // Seed present IDs from already-stored attendance rows
-  const [presentIds, setPresentIds] = useState<Set<number>>(
-    () =>
-      new Set(
-        attendance.filter(r => r.status === 'PRESENT').map(r => r.enrollment_id)
-      )
-  );
+  const roster = attendance;
+  const enrollmentById = new Map(enrollments.map(e => [e.id, e]));
+
+  const [presentIds, setPresentIds] = useState<Set<number>>(() => presentIdsFrom(roster));
   const [saving, setSaving] = useState(false);
 
   function toggle(enrollmentId: number) {
@@ -107,18 +118,24 @@ function AttendanceSheet({ sessionId, enrollments, attendance, onSaved }: Attend
   }
 
   function markAllPresent() {
-    setPresentIds(new Set(enrollments.map(e => e.id)));
+    setPresentIds(new Set(roster.map(r => r.enrollment_id)));
   }
 
   async function handleSave() {
     setSaving(true);
     try {
       const rows = (await markAttendance(sessionId, [...presentIds])) as AttendanceRow[];
+      const savedRows = Array.isArray(rows) ? rows : [];
+      const presentAfterSave = presentIdsFrom(savedRows).size;
       toastEmitter.emit(
-        `Attendance saved! ${presentIds.size} present, ${enrollments.length - presentIds.size} absent.`,
+        `Attendance saved! ${presentAfterSave} present, ${savedRows.length - presentAfterSave} absent.`,
         'success'
       );
-      onSaved(Array.isArray(rows) ? rows : []);
+      // Resync from the server's response (the source of truth) rather than
+      // trusting whatever was locally toggled — a toggled ID with no
+      // attendance row for this session is silently ignored server-side.
+      setPresentIds(presentIdsFrom(savedRows));
+      onSaved(savedRows);
     } catch {
       Alert.alert('Error', 'Failed to save attendance. Please try again.');
     } finally {
@@ -127,7 +144,7 @@ function AttendanceSheet({ sessionId, enrollments, attendance, onSaved }: Attend
   }
 
   const presentCount = presentIds.size;
-  const absentCount = enrollments.length - presentCount;
+  const absentCount = roster.length - presentCount;
 
   return (
     <View style={styles.sheetContainer}>
@@ -146,25 +163,27 @@ function AttendanceSheet({ sessionId, enrollments, attendance, onSaved }: Attend
 
       <View style={styles.sheetDivider} />
 
-      {/* Student rows — one per enrollment */}
-      {enrollments.length === 0 ? (
+      {/* Student rows — one per attendance record for this session */}
+      {roster.length === 0 ? (
         <AppText
           variant="body"
           color={C.text3}
           style={{ textAlign: 'center', paddingVertical: spacing.lg }}
         >
-          No active enrollments in this batch.
+          No students were enrolled when this session was created.
         </AppText>
       ) : (
         <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
-          {enrollments.map(enrollment => {
-            const isPresent = presentIds.has(enrollment.id);
+          {roster.map(row => {
+            const enrollment = enrollmentById.get(row.enrollment_id);
+            const isPresent = presentIds.has(row.enrollment_id);
+            const label = enrollment?.student_name ?? `Enrollment #${row.enrollment_id}`;
             return (
               <Touchable
-                key={enrollment.id}
-                onPress={() => toggle(enrollment.id)}
+                key={row.enrollment_id}
+                onPress={() => toggle(row.enrollment_id)}
                 accessibilityRole="button"
-                accessibilityLabel={`${enrollment.student_name ?? `Student ${enrollment.student_id}`}, ${isPresent ? 'present' : 'absent'}`}
+                accessibilityLabel={`${label}, ${isPresent ? 'present' : 'absent'}`}
                 style={[
                   styles.studentRow,
                   {
@@ -178,7 +197,7 @@ function AttendanceSheet({ sessionId, enrollments, attendance, onSaved }: Attend
                 ]}
               >
                 <AppText variant="body" style={{ flex: 1 }}>
-                  {enrollment.student_name ?? `Student #${enrollment.student_id}`}
+                  {label}
                 </AppText>
                 <View style={styles.studentStatus}>
                   <MaterialIcons
@@ -205,7 +224,7 @@ function AttendanceSheet({ sessionId, enrollments, attendance, onSaved }: Attend
         label="Save Attendance"
         onPress={handleSave}
         loading={saving}
-        disabled={enrollments.length === 0}
+        disabled={roster.length === 0}
       />
     </View>
   );

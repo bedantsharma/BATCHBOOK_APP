@@ -15,6 +15,8 @@ import { AppButton } from '../../components/AppButton';
 import { AppInput } from '../../components/AppInput';
 import { StatusChip } from '../../components/StatusChip';
 import { BottomSheetModal } from '../../components/BottomSheetModal';
+import { DateTimeField } from '../../components/DateTimeField';
+import { FilterChip } from '../../components/FilterChip';
 import { Touchable } from '../../components/Touchable';
 import { AnimatedProgressBar } from '../../components/AnimatedProgressBar';
 import { SkeletonList } from '../../components/Skeleton';
@@ -51,6 +53,8 @@ function formatTime(t?: string | null): string {
 
 // ── Create Batch Modal ──────────────────────────────────────────────────────
 
+const DAYS_OF_WEEK = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const;
+
 interface CreateBatchForm {
   name: string;
   subject: string;
@@ -58,6 +62,8 @@ interface CreateBatchForm {
   start_time: string;
   end_time: string;
   max_capacity: string;
+  days_of_week: string[];
+  end_date: string;
 }
 
 function CreateBatchModal({
@@ -76,6 +82,8 @@ function CreateBatchModal({
     start_time: '',
     end_time: '',
     max_capacity: '',
+    days_of_week: [],
+    end_date: '',
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof CreateBatchForm, string>>>({});
@@ -85,10 +93,27 @@ function CreateBatchModal({
     setErrors(e => (e[key] ? { ...e, [key]: undefined } : e));
   };
 
+  const toggleDay = (day: string) => {
+    setForm(f => ({
+      ...f,
+      days_of_week: f.days_of_week.includes(day)
+        ? f.days_of_week.filter(d => d !== day)
+        : [...f.days_of_week, day],
+    }));
+    setErrors(e => (e.days_of_week ? { ...e, days_of_week: undefined } : e));
+  };
+
   const validate = (): boolean => {
     const next: Partial<Record<keyof CreateBatchForm, string>> = {};
     if (!form.name.trim()) next.name = 'Batch name is required.';
-    if (form.max_capacity.trim()) {
+    if (!form.subject.trim()) next.subject = 'Subject is required.';
+    if (!form.start_time.trim()) next.start_time = 'Start time is required.';
+    if (!form.end_time.trim()) next.end_time = 'End time is required.';
+    if (!form.end_date.trim()) next.end_date = 'End date is required.';
+    if (form.days_of_week.length === 0) next.days_of_week = 'Select at least one day.';
+    if (!form.max_capacity.trim()) {
+      next.max_capacity = 'Capacity is required.';
+    } else {
       const cap = parseInt(form.max_capacity, 10);
       if (isNaN(cap) || cap <= 0) next.max_capacity = 'Capacity must be a positive number.';
     }
@@ -102,13 +127,24 @@ function CreateBatchModal({
     try {
       await createBatch({
         name: form.name.trim(),
-        subject: form.subject.trim() || undefined,
+        subject: form.subject.trim(),
         grade: form.grade.trim() || undefined,
-        start_time: form.start_time.trim() || undefined,
-        end_time: form.end_time.trim() || undefined,
-        max_capacity: form.max_capacity ? parseInt(form.max_capacity, 10) : undefined,
+        start_time: form.start_time.trim(),
+        end_time: form.end_time.trim(),
+        max_capacity: parseInt(form.max_capacity, 10),
+        days_of_week: form.days_of_week,
+        end_date: form.end_date,
       });
-      setForm({ name: '', subject: '', grade: '', start_time: '', end_time: '', max_capacity: '' });
+      setForm({
+        name: '',
+        subject: '',
+        grade: '',
+        start_time: '',
+        end_time: '',
+        max_capacity: '',
+        days_of_week: [],
+        end_date: '',
+      });
       setErrors({});
       haptics.success();
       toastEmitter.emit('Batch created', 'success');
@@ -134,10 +170,11 @@ function CreateBatchModal({
             error={errors.name}
           />
           <AppInput
-            label="Subject"
+            label="Subject *"
             placeholder="e.g. Mathematics"
             value={form.subject}
             onChangeText={set('subject')}
+            error={errors.subject}
           />
           <AppInput
             label="Grade"
@@ -145,20 +182,49 @@ function CreateBatchModal({
             value={form.grade}
             onChangeText={set('grade')}
           />
-          <AppInput
-            label="Start Time"
-            placeholder="e.g. 07:00"
+          <DateTimeField
+            label="Start Time *"
+            mode="time"
             value={form.start_time}
-            onChangeText={set('start_time')}
+            onChange={set('start_time')}
+            error={errors.start_time}
           />
-          <AppInput
-            label="End Time"
-            placeholder="e.g. 08:30"
+          <DateTimeField
+            label="End Time *"
+            mode="time"
             value={form.end_time}
-            onChangeText={set('end_time')}
+            onChange={set('end_time')}
+            error={errors.end_time}
           />
+          <DateTimeField
+            label="Ends On *"
+            mode="date"
+            value={form.end_date}
+            onChange={set('end_date')}
+            error={errors.end_date}
+          />
+          <View style={{ gap: spacing.sm }}>
+            <AppText variant="caption" color={C.text2}>
+              Days of Week *
+            </AppText>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+              {DAYS_OF_WEEK.map(day => (
+                <FilterChip
+                  key={day}
+                  label={day}
+                  active={form.days_of_week.includes(day)}
+                  onPress={() => toggleDay(day)}
+                />
+              ))}
+            </View>
+            {errors.days_of_week ? (
+              <AppText variant="caption" color={C.error}>
+                {errors.days_of_week}
+              </AppText>
+            ) : null}
+          </View>
           <AppInput
-            label="Capacity"
+            label="Capacity *"
             placeholder="e.g. 20"
             value={form.max_capacity}
             onChangeText={set('max_capacity')}

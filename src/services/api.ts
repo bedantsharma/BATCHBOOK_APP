@@ -94,19 +94,49 @@ api.interceptors.request.use(async (config) => {
     cachedExpiresAt = session?.expires_at ?? 0;
   }
 
+  // Pre-login calls (generate_otp, verify_otp, …) legitimately have no session
+  // yet — only attach the header when we actually have a token. Don't reject
+  // here: this instance is shared with unauthenticated endpoints too.
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
+function isMissingAuthHeaderError(error: any): boolean {
+  const detail = error.response?.data?.detail;
+  return (
+    error.response?.status === 422 &&
+    Array.isArray(detail) &&
+    detail.some((d) => d.loc?.includes('header') && d.loc?.includes('authorization'))
+  );
+}
+
+function extractErrorMessage(error: any): string {
+  if (isMissingAuthHeaderError(error)) return 'Session expired — please log in again.';
+  // FastAPI errors come back as { detail: "..." } for HTTPException, or
+  // { detail: [{ loc, msg, type }, ...] } for pydantic validation errors —
+  // never `message`, so reading `data.message` here always misses.
+  const detail = error.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((d) => `${d.loc?.join('.')}: ${d.msg}`).join('; ');
+  }
+  return error.message || 'Failed to load data. Please try again.';
+}
+
 // Show a global error toast for any non-401 failure
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (__DEV__) {
+      console.log(
+        `[api] ${error.config?.method?.toUpperCase()} ${error.config?.url} → ${error.response?.status ?? 'NETWORK ERROR'}`,
+        error.response?.data ?? error.message,
+      );
+    }
     if (error.response?.status !== 401) {
-      const message = error.response?.data?.message || error.message || 'Failed to load data. Please try again.';
-      toastEmitter.emit(message, 'error');
+      toastEmitter.emit(extractErrorMessage(error), 'error');
     }
     return Promise.reject(error);
   }

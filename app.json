@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "BATCHBOOK_APP",
+    "name": "BatchBook",
     "slug": "BATCHBOOK_APP",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,7 +15,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.BATCHBOOK_APP"
+      "package": "in.batchbook.batchbook"
     },
     "web": {
       "output": "static",

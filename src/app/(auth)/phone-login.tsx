@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { View, StyleSheet, Platform, Pressable } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppInput } from '../../components/AppInput';

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { Modal, View, StyleSheet, Platform } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import C, { radius } from '../constants/colors';
 import { spacing } from '../constants/spacing';
 

@@ -8,6 +8,7 @@ import {
   DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
 import * as SplashScreen from 'expo-splash-screen';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { AuthProvider } from '../context/AuthContext';
 import { ToastProvider } from '../components/ToastProvider';
 import C from '../constants/colors';
@@ -31,10 +32,12 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }} />
-      </ToastProvider>
-    </AuthProvider>
+    <KeyboardProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }} />
+        </ToastProvider>
+      </AuthProvider>
+    </KeyboardProvider>
   );
 }

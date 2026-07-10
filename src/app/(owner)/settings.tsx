@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { AppText } from '../../components/AppText';
 import { AppCard } from '../../components/AppCard';
 import { AppButton } from '../../components/AppButton';
@@ -12,6 +13,7 @@ import C, { withOpacity } from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 import { toastEmitter } from '../../lib/toastEmitter';
 import { haptics } from '../../lib/haptics';
+import { useAuth } from '../../context/AuthContext';
 import {
   getRazorpayPayoutStatus,
   saveRazorpayCredentials,
@@ -29,6 +31,8 @@ function statusChipProps(status: RazorpayPayoutStatus['status']) {
  * payments settle directly into their own account (BYO-Razorpay).
  */
 export default function SettingsScreen() {
+  const router = useRouter();
+  const { signOut } = useAuth();
   const [status, setStatus] = useState<RazorpayPayoutStatus['status']>('NOT_CONNECTED');
   const [keyId, setKeyId] = useState('');
   const [keySecret, setKeySecret] = useState('');
@@ -67,6 +71,29 @@ export default function SettingsScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'You’ll need to sign in again to access your batches.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            haptics.tap();
+            try {
+              await signOut();
+              router.replace('/(auth)/landing' as never);
+            } catch {
+              toastEmitter.emit('Failed to sign out. Please try again.', 'error');
+            }
+          },
+        },
+      ],
+    );
   };
 
   const chip = statusChipProps(status);
@@ -138,6 +165,27 @@ export default function SettingsScreen() {
               />
             </View>
           )}
+        </AppCard>
+
+        <AppCard style={{ marginTop: spacing.lg }}>
+          <View style={styles.titleRow}>
+            <View
+              style={[styles.iconBadge, { backgroundColor: withOpacity(C.error, 'medium') }]}
+              importantForAccessibility="no"
+              accessibilityElementsHidden
+            >
+              <MaterialIcons name="logout" size={18} color={C.error} />
+            </View>
+            <AppText variant="body" weight="600" style={{ flex: 1 }}>Account</AppText>
+          </View>
+
+          <AppButton
+            label="Sign Out"
+            onPress={handleSignOut}
+            variant="secondary"
+            accessibilityLabel="Sign out of your account"
+            accessibilityHint="Asks for confirmation, then signs you out and returns you to the sign-in screen"
+          />
         </AppCard>
       </ScrollView>
     </SafeAreaView>

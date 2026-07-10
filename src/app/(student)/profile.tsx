@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
@@ -10,6 +10,8 @@ import { StudentScreen } from '../../components/StudentScreen';
 import C from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 import { studentStyles as s } from '../../lib/studentDashboardStyles';
+import { toastEmitter } from '../../lib/toastEmitter';
+import { haptics } from '../../lib/haptics';
 import { useAuth } from '../../context/AuthContext';
 import { useStudentData } from '../../context/StudentDataContext';
 
@@ -18,9 +20,27 @@ export default function ProfileScreen() {
   const { signOut } = useAuth();
   const { profile, loading } = useStudentData();
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.replace('/(auth)/landing' as never);
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'You’ll need to sign in again to access your batches.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            haptics.tap();
+            try {
+              await signOut();
+              router.replace('/(auth)/landing' as never);
+            } catch {
+              toastEmitter.emit('Failed to sign out. Please try again.', 'error');
+            }
+          },
+        },
+      ],
+    );
   };
 
   if (loading) {
@@ -75,7 +95,14 @@ export default function ProfileScreen() {
       </AppCard>
 
       {/* Sign Out */}
-      <AppButton label="Sign Out" onPress={handleSignOut} variant="secondary" style={{ marginTop: spacing.sm }} />
+      <AppButton
+        label="Sign Out"
+        onPress={handleSignOut}
+        variant="secondary"
+        style={{ marginTop: spacing.sm }}
+        accessibilityLabel="Sign out of your account"
+        accessibilityHint="Asks for confirmation, then signs you out and returns you to the sign-in screen"
+      />
     </StudentScreen>
   );
 }

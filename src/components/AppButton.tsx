@@ -10,6 +10,8 @@ interface AppButtonProps {
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }
 
 export function AppButton({
@@ -19,6 +21,8 @@ export function AppButton({
   loading = false,
   disabled = false,
   style,
+  accessibilityLabel,
+  accessibilityHint,
 }: AppButtonProps) {
   const bg =
     variant === 'primary' ? C.primary : variant === 'secondary' ? C.surface2 : 'transparent';
@@ -34,6 +38,10 @@ export function AppButton({
     <Pressable
       onPress={handlePress}
       disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       style={({ pressed }) => [
         styles.base,
         { backgroundColor: bg, opacity: pressed || disabled ? 0.7 : 1 },

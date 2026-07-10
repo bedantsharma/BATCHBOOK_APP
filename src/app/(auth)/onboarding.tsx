@@ -200,7 +200,7 @@ export default function OnboardingScreen() {
                 <AppText size={32} style={styles.joinIcon}>🎓</AppText>
                 <AppText variant="title" style={styles.stepTitle}>Almost there!</AppText>
                 <AppText variant="body" color={C.text2} style={styles.joinSubtitle}>
-                  Login with your parent's mobile number to see your schedule, attendance, and fees
+                  Login with your parent&apos;s mobile number to see your schedule, attendance, and fees
                 </AppText>
                 <AppButton
                   label="Continue to Login →"

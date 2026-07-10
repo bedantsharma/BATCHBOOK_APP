@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Text } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,7 +9,7 @@ import { AppText } from '../../components/AppText';
 import { AppCard } from '../../components/AppCard';
 import { Touchable } from '../../components/Touchable';
 import { AnimatedProgressBar } from '../../components/AnimatedProgressBar';
-import C, { radius } from '../../constants/colors';
+import C from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 
 type Role = 'owner' | 'student' | null;
@@ -68,8 +68,9 @@ export default function OnboardingScreen() {
         await AsyncStorage.setItem('onboarding_profile', JSON.stringify(profile));
         if (profile.role === 'owner') {
           router.replace('/(auth)/phone-login' as any);
+        } else if (profile.role === 'student') {
+          router.replace('/(auth)/student-phone-login' as any);
         }
-        // student stays on step 3 — shows "ask for join link" message
       } finally {
         setLoading(false);
       }
@@ -196,18 +197,15 @@ export default function OnboardingScreen() {
               </>
             ) : (
               <>
-                <AppText size={32} style={styles.joinIcon}>🔗</AppText>
-                <AppText variant="title" style={styles.stepTitle}>Ask your tutor</AppText>
+                <AppText size={32} style={styles.joinIcon}>🎓</AppText>
+                <AppText variant="title" style={styles.stepTitle}>Almost there!</AppText>
                 <AppText variant="body" color={C.text2} style={styles.joinSubtitle}>
-                  Ask your tutor to send you a BatchBook join link. It looks like:
+                  Login with your parent's mobile number to see your schedule, attendance, and fees
                 </AppText>
-                <View style={styles.joinCodeBox}>
-                  <Text style={styles.joinCodeText}>batchbook://join/ABC123</Text>
-                </View>
                 <AppButton
-                  label="Done"
-                  onPress={() => router.replace('/(auth)/landing' as any)}
-                  variant="secondary"
+                  label="Continue to Login →"
+                  onPress={handleContinue}
+                  loading={loading}
                   style={styles.doneBtn}
                 />
               </>
@@ -237,18 +235,4 @@ const styles = StyleSheet.create({
   doneBtn: { marginTop: spacing.xxl },
   joinIcon: { textAlign: 'center', marginBottom: spacing.lg },
   joinSubtitle: { lineHeight: 20, marginBottom: 20 },
-  joinCodeBox: {
-    backgroundColor: C.surface2,
-    borderRadius: radius.md,
-    padding: 14,
-    marginBottom: spacing.xxl,
-    alignItems: 'center',
-  },
-  joinCodeText: {
-    fontSize: 13,
-    color: C.primary,
-    fontWeight: '600',
-    fontFamily: 'DMSans_600SemiBold',
-    letterSpacing: 0.5,
-  },
 });

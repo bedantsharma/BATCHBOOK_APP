@@ -76,3 +76,64 @@ the sheet" (previously provided by `Modal`'s `onRequestClose`).
 - Don't test this class of bug in Expo Go and call it done — it only reproduces in a
   real EAS/standalone build on a device. Verify keyboard behavior in modals on an actual
   build before shipping.
+
+##  Research-Backed Principles (reference)
+
+*Sources: Nielsen Norman Group (NN/g), Apple Human Interface Guidelines (HIG), Material Design 3,
+Laws of UX, WCAG 2.1.*
+
+### Nielsen's 10 Usability Heuristics
+1. **Visibility of system status** — timely feedback for every action.
+2. **Match the real world** — user's language ("Mark attendance", "Pending fees"), not jargon.
+3. **User control & freedom** — clear undo/cancel; an "emergency exit" from mistakes.
+4. **Consistency & standards** — same word/action/placement means the same thing everywhere.
+5. **Error prevention** — disable invalid actions, confirm irreversible ones, use pickers not free text.
+6. **Recognition over recall** — show selectable options (chips, pickers) instead of remembered input.
+7. **Flexibility & efficiency** — accelerators for power users ("Mark all present", swipe actions).
+8. **Aesthetic & minimalist design** — every element competes for attention; show only what matters.
+9. **Help users recover from errors** — plain-language cause + recovery action ("Retry"), preserve input.
+10. **Help & documentation** — contextual, just-in-time hints over buried manuals.
+
+### Mobile-specific
+- **Touch targets:** ≥44×44pt (Apple HIG) / 48×48dp (Material), ≥8dp apart. Icon can be 24px with
+  invisible padded hit area.
+- **Thumb zones:** primary nav + CTA bottom-anchored; rare/destructive actions top corners.
+- **Navigation:** bottom tab bar for 3–5 destinations with a clear active state; avoid hamburger
+  menus for primary nav.
+- **Jakob's Law:** match platform conventions (edge-swipe back, swipe-to-dismiss sheets, system share).
+
+### Visual hierarchy, spacing & typography
+- **8pt spacing grid** (4/8/16/24/32) — strongest polish signal.
+- **Small typographic scale** (display/title/body/caption), 1–2 font families, line-height ~1.4–1.5.
+- **Semantic color roles** — Paid=green, Pending=amber, Overdue=red, used consistently; never rely on
+  color alone (pair with label/icon).
+
+### Feedback & system status
+- **Skeletons** for content loads (lists/dashboards), **spinners** for short blocking actions (save/pay).
+- **Empty states** explain what goes here + offer the first action.
+- **Error states** state cause + recovery, preserve input.
+- **Optimistic updates** reflect the action instantly, roll back on failure.
+- **Micro-interactions** — subtle motion/haptics confirm actions and raise perceived quality.
+
+### Cognitive load (Laws of UX)
+- **Progressive disclosure**, **recognition over recall**, **chunking (Miller's ~7±2)**,
+  **Hick's Law** (fewer choices = faster decisions), **Fitts's Law** (frequent targets large & near).
+
+### Accessibility (WCAG 2.1 AA)
+- Contrast **4.5:1** normal text, **3:1** large text / UI components.
+- Respect **Dynamic Type**; layouts reflow without clipping.
+- **Screen-reader labels** on every interactive/iconic control; decorative images hidden.
+- **Visible affordances** for gestures; no critical action gesture-only.
+
+### Amateur vs. Polished — observable signals
+| Signal | Amateur | Polished |
+|---|---|---|
+| Spacing | Arbitrary gaps | Strict 8pt scale |
+| Typography | Many random sizes/weights | Small intentional scale |
+| Color | Ad-hoc hex, low contrast | Semantic palette, accessible |
+| Motion | Instant cuts / janky | Subtle 150–300ms transitions |
+| States | Blank screens, raw spinners | Skeletons, designed empty/error states |
+| Components | Stock/misaligned | Consistent, grid-aligned |
+| Touch targets | Tiny, crowded | ≥44–48pt, spaced |
+
+---

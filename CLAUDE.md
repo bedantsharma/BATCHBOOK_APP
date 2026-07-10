@@ -35,32 +35,44 @@ focus a text input — the keyboard pushes the form off-screen, and closing the 
 causes a violent flicker/stutter instead of a smooth resize. Works fine in Expo Go;
 only reproduces in a real device build (EAS/standalone APK).
 
-**Why:** RN's `<Modal>` on Android renders into a *second native Dialog window*,
-separate from the Activity's window. This project's RN/Expo version forces that Dialog
-window into edge-to-edge mode (`ReactModalHostView`'s `statusBarTranslucent` /
-`navigationBarTranslucent` getters return `true` whenever the app's edge-to-edge feature
-flag is on, which it is by default), while also hardcoding
-`SOFT_INPUT_ADJUST_RESIZE` on that same window. Edge-to-edge + `adjustResize` don't
-compose: the OS-driven window resize and RN's stock `KeyboardAvoidingView` (which
-computes its own height/padding via `Dimensions` diffing) race each other — hence
-push-off-screen on open, flicker on close. Expo Go doesn't hit this because it runs a
-different bundled RN runtime for the Modal codepath, so the bug is invisible until a
-real standalone build.
+**First hypothesis (WRONG, don't repeat it):** assumed this was a `SOFT_INPUT_ADJUST_RESIZE`
+vs. edge-to-edge race inside `KeyboardAvoidingView`'s height math, and "fixed" it by
+swapping to `react-native-keyboard-controller`. That change was verified (native module
+confirmed present in the built APK, JS wired up correctly) but made **zero** visible
+difference on-device — proof the diagnosis was incomplete.
 
-**Fix (already in place):** installed `react-native-keyboard-controller`, wrapped the
-app root (`src/app/_layout.tsx`) in `<KeyboardProvider>`, and swapped the `KeyboardAvoidingView`
-import in `src/components/BottomSheetModal.tsx` to come from
-`react-native-keyboard-controller` instead of `react-native`. That library specifically
-detects RN `<Modal>`s (`ModalAttachedWatcher.kt`), attaches its own
-`WindowInsetsAnimationCallback` directly to the Modal's Dialog window, and sets
-`SOFT_INPUT_ADJUST_NOTHING` on it — sidestepping the OS resize race entirely and driving
-avoidance from real native inset-animation values instead.
+**Actual root cause (confirmed via live `adb logcat` while reproducing on a real device):**
+RN's `<Modal>` on Android renders into a *second native Dialog window*, separate from the
+Activity's window (`ReactModalHostView.kt` creates a fresh `ComponentDialog` and calls
+`WindowManager.addView`). The logcat capture showed that window being **destroyed and a
+brand-new one created** (`Add to mViews` → `window dying`/`EXITING` → new `Add to mViews`)
+*during* the interaction — once right as the keyboard first engaged, and again right as it
+was dismissed — not a resize, a full native-surface teardown and rebuild. That is what reads
+as "pushed off screen" (the whole surface momentarily gone) and "flickers like crazy"
+(destroy + recreate, twice). Swapping which `KeyboardAvoidingView` implementation sits
+inside the Modal can't fix this: the keyboard-avoidance code has nothing to attach to once
+the window it was attached to gets torn down mid-session. Expo Go doesn't hit this because
+Modal show/hide state doesn't force the same dialog-recreation path there.
+
+**Fix (already in place):** removed RN's `<Modal>` from `src/components/BottomSheetModal.tsx`
+entirely. It's now a plain conditionally-rendered, absolutely-positioned overlay `View`
+inside the screen's own tree (same Activity window, no second native window to tear down),
+using `KeyboardAvoidingView` from `react-native-keyboard-controller` for the actual
+avoidance behavior, plus a manual `BackHandler` listener to preserve "back button closes
+the sheet" (previously provided by `Modal`'s `onRequestClose`).
 
 **Rules for future keyboard/modal work:**
-- Any new modal/bottom-sheet with text inputs must use `KeyboardAvoidingView` from
-  `react-native-keyboard-controller`, not the one built into `react-native`. This
-  matters for **every** `<Modal>` in the app (`BottomSheetModal.tsx` is shared by
-  batches, students, fees, attendance, and tests screens), not just batch creation.
+- Don't reach for RN's `<Modal>` for anything that contains a text input in this app —
+  it can be silently torn down and recreated by the OS/RN mid-interaction, wiping out
+  whatever keyboard-avoidance is attached to it. Use the in-tree overlay pattern in
+  `BottomSheetModal.tsx` instead (shared by batches, students, fees, attendance, and tests
+  screens). `src/components/DateTimeField.tsx` still uses a real `<Modal>` for its
+  date/time picker — that's fine since it has no text input, but if it ever grows one,
+  convert it too.
+- If a keyboard/modal bug survives a fix, don't trust the fix from source-reading alone —
+  pull real `adb logcat` while reproducing on-device (`adb logcat -c`, reproduce, dump/kill
+  the capture, grep for `Add to mViews` / `window dying` / `EXITING` / `hide(ime` /
+  `show(ime`). That's what caught this.
 - Don't test this class of bug in Expo Go and call it done — it only reproduces in a
   real EAS/standalone build on a device. Verify keyboard behavior in modals on an actual
   build before shipping.

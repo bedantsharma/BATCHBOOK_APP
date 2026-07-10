@@ -54,7 +54,7 @@ export default function StudentPhoneLoginScreen() {
             <LogoMark size={48} />
             <AppText variant="title" style={styles.title}>Student Login</AppText>
             <AppText variant="body" color={C.text2} style={styles.subtitle}>
-              We'll send a 6-digit OTP to your parent's mobile number
+              We&apos;ll send a 6-digit OTP to your parent&apos;s mobile number
             </AppText>
           </View>
 

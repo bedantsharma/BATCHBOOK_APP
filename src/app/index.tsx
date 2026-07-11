@@ -41,13 +41,19 @@ export default function Index() {
       try {
         const { data } = await api.get('/parent/me');
         const child: ParentMeChild | undefined = data.children?.[0];
-        await AsyncStorage.setItem('bb_role', 'student');
-        if (child) {
-          await AsyncStorage.setItem('bb_student_id', String(child.id));
-          await AsyncStorage.setItem('bb_student_name', child.name ?? '');
+        if (!child) {
+          // Parent has a valid session but no linked student — same as the
+          // "unknown number" case student-otp-verification.tsx blocks.
+          // Send them through the normal phone/OTP flow instead of stamping
+          // a broken student role.
+          router.replace('/(auth)/onboarding' as AnyRoute);
+          return;
         }
+        await AsyncStorage.setItem('bb_role', 'student');
+        await AsyncStorage.setItem('bb_student_id', String(child.id));
+        await AsyncStorage.setItem('bb_student_name', child.name ?? '');
         const missing = computeMissingFields(data.name, child);
-        if (child && hasMissingFields(missing)) {
+        if (hasMissingFields(missing)) {
           router.replace({
             pathname: '/(auth)/complete-profile',
             params: {

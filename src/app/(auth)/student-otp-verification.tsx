@@ -11,10 +11,12 @@ import C from '../../constants/colors';
 import { spacing } from '../../constants/spacing';
 import api from '../../services/api';
 import { supabase } from '../../lib/supabaseClient';
+import { computeMissingFields, hasMissingFields } from '../../lib/profileCompleteness';
 
 interface ChildSummary {
   id: number;
   name: string | null;
+  email: string | null;
   fees_status: string;
 }
 
@@ -61,7 +63,19 @@ export default function StudentOtpVerificationScreen() {
         await AsyncStorage.setItem('bb_student_id', String(children[0].id));
         await AsyncStorage.setItem('bb_student_name', children[0].name ?? '');
 
-        router.replace('/(student)/home' as any);
+        const missing = computeMissingFields(data.parent_name, children[0]);
+        if (hasMissingFields(missing)) {
+          router.replace({
+            pathname: '/(auth)/complete-profile',
+            params: {
+              childId: String(children[0].id),
+              missingParentName: missing.parentName ? '1' : '0',
+              missingChildEmail: missing.childEmail ? '1' : '0',
+            },
+          } as any);
+        } else {
+          router.replace('/(student)/home' as any);
+        }
       } catch {
         setError('Invalid OTP. Please try again.');
         setOtp('');

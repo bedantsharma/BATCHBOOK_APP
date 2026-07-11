@@ -60,7 +60,7 @@ export default function LandingScreen() {
           />
           <AppButton
             label="I'm a Student"
-            onPress={() => router.push({ pathname: '/(auth)/onboarding', params: { role: 'student' } } as any)}
+            onPress={() => router.push('/(auth)/student-phone-login' as any)}
             variant="secondary"
             style={styles.ctaBtn}
           />

@@ -17,8 +17,6 @@ type Role = 'owner' | 'student' | null;
 interface Profile {
   role: Role;
   name: string;
-  parentName: string;
-  parentPhone: string;
 }
 
 const TOTAL_STEPS = 3;
@@ -35,8 +33,6 @@ export default function OnboardingScreen() {
   const [profile, setProfile] = useState<Profile>({
     role: preselectedRole,
     name: '',
-    parentName: '',
-    parentPhone: '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -78,10 +74,7 @@ export default function OnboardingScreen() {
   };
 
   const canContinue = () => {
-    if (step === 2 && profile.role === 'owner') return profile.name.trim().length > 0;
-    if (step === 2 && profile.role === 'student') {
-      return profile.name.trim().length > 0 && profile.parentPhone.trim().length === 10;
-    }
+    if (step === 2) return profile.name.trim().length > 0;
     return true;
   };
 
@@ -141,7 +134,7 @@ export default function OnboardingScreen() {
           <View style={styles.stepContainer}>
             <AppText variant="title" style={styles.stepTitle}>Your details</AppText>
             <AppText variant="body" color={C.text2} style={styles.stepSubtitle}>
-              {profile.role === 'owner' ? 'Tell us your name' : 'Tell us about the student'}
+              {profile.role === 'owner' ? 'Tell us your name' : 'Tell us your name'}
             </AppText>
             <View style={styles.form}>
               <AppInput
@@ -151,24 +144,6 @@ export default function OnboardingScreen() {
                 onChangeText={name => setProfile(p => ({ ...p, name }))}
                 autoFocus
               />
-              {profile.role === 'student' && (
-                <>
-                  <AppInput
-                    label="Parent / Guardian Name"
-                    placeholder="Full name"
-                    value={profile.parentName}
-                    onChangeText={parentName => setProfile(p => ({ ...p, parentName }))}
-                  />
-                  <AppInput
-                    label="Parent Mobile Number"
-                    placeholder="10-digit number"
-                    value={profile.parentPhone}
-                    onChangeText={t => setProfile(p => ({ ...p, parentPhone: t.replace(/\D/g, '').slice(0, 10) }))}
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                  />
-                </>
-              )}
               <AppButton
                 label="Continue"
                 onPress={handleContinue}

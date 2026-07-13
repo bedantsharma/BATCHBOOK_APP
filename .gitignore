@@ -46,3 +46,4 @@ example
 # Git worktrees (superpowers:using-git-worktrees)
 .worktrees/
 .idea
+.gitnexus

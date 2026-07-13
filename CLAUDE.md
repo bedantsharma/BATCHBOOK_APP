@@ -77,6 +77,33 @@ the sheet" (previously provided by `Modal`'s `onRequestClose`).
   real EAS/standalone build on a device. Verify keyboard behavior in modals on an actual
   build before shipping.
 
+## KNOWN ISSUE / TODO: no returning-student flow — every launch re-runs onboarding
+
+**Symptom:** a student who has already logged in once (phone + OTP, landed on
+`/(student)/home`) gets sent through the *entire* onboarding journey again on every
+subsequent app open — landing → role select → profile step 2 → step 3 → phone login →
+OTP — instead of being recognized as already-authenticated and dropped straight onto
+`/(student)/home`.
+
+**Why this happens (likely cause, not yet root-caused):** `student-otp-verification.tsx`
+writes a real Supabase session (`supabase.auth.setSession`) plus `AsyncStorage` keys
+(`bb_role='student'`, `bb_student_id`, `bb_student_name`) on successful login, but nothing
+in `onboarding.tsx` / the app's root/entry routing appears to check for an existing
+session or these `AsyncStorage` keys on launch before routing the user into the
+onboarding flow. Needs verification against `AuthContext.tsx` and whatever decides the
+initial route (root `_layout.tsx` / index route) — this hasn't been read yet as part of
+this note.
+
+**What's needed:** a session-restore / "returning user" check on app boot (or at least on
+the onboarding entry point) that reads the Supabase session + `bb_role`/`bb_student_id`
+from `AsyncStorage` and, if present and valid, redirects straight to `/(student)/home`
+(and presumably the equivalent owner dashboard for `bb_role='owner'`) instead of
+rendering onboarding at all.
+
+**Status:** identified but not yet designed or implemented. This affects both the
+student and (likely) owner login paths — anywhere the onboarding flow is the only entry
+point and nothing short-circuits it for an already-authenticated user.
+
 ##  Research-Backed Principles (reference)
 
 *Sources: Nielsen Norman Group (NN/g), Apple Human Interface Guidelines (HIG), Material Design 3,
@@ -137,3 +164,47 @@ Laws of UX, WCAG 2.1.*
 | Touch targets | Tiny, crowded | ≥44–48pt, spaced |
 
 ---
+
+<!-- gitnexus:start -->
+# GitNexus — Code Intelligence
+
+This project is indexed by GitNexus as **BATCHBOOK_APP** (851 symbols, 1352 relationships, 11 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+
+> If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
+
+## Always Do
+
+- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
+- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
+- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
+- When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
+- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
+
+## Never Do
+
+- NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
+- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
+- NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
+- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
+
+## Resources
+
+| Resource | Use for |
+|----------|---------|
+| `gitnexus://repo/BATCHBOOK_APP/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/BATCHBOOK_APP/clusters` | All functional areas |
+| `gitnexus://repo/BATCHBOOK_APP/processes` | All execution flows |
+| `gitnexus://repo/BATCHBOOK_APP/process/{name}` | Step-by-step execution trace |
+
+## CLI
+
+| Task | Read this skill file |
+|------|---------------------|
+| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
+| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
+| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
+| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
+| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
+| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+
+<!-- gitnexus:end -->

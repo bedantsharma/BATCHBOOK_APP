@@ -273,12 +273,12 @@ interface StudentCardProps {
   enrollment: EnrollmentRow;
   scoreCache: Record<number, TestScore[]>;
   onScoresCached: (enrollmentId: number, scores: TestScore[]) => void;
+  onAddScore: (enrollment: EnrollmentRow) => void;
 }
 
-function StudentCard({ enrollment, scoreCache, onScoresCached }: StudentCardProps) {
+function StudentCard({ enrollment, scoreCache, onScoresCached, onAddScore }: StudentCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [loadingScores, setLoadingScores] = useState(false);
-  const [addScoreVisible, setAddScoreVisible] = useState(false);
 
   const cachedScores = scoreCache[enrollment.id];
   const displayName = enrollment.student_name ?? `Student #${enrollment.student_id}`;
@@ -297,11 +297,6 @@ function StudentCard({ enrollment, scoreCache, onScoresCached }: StudentCardProp
       }
     }
     setExpanded(v => !v);
-  }
-
-  function handleScoreSaved(newScore: TestScore) {
-    const existing = scoreCache[enrollment.id] ?? [];
-    onScoresCached(enrollment.id, [newScore, ...existing]);
   }
 
   const scores = cachedScores ?? [];
@@ -352,7 +347,7 @@ function StudentCard({ enrollment, scoreCache, onScoresCached }: StudentCardProp
           <View style={styles.addScoreRow}>
             <Touchable
               haptic
-              onPress={() => setAddScoreVisible(true)}
+              onPress={() => onAddScore(enrollment)}
               style={styles.addScoreBtn}
               hitSlop={8}
               accessibilityRole="button"
@@ -383,14 +378,6 @@ function StudentCard({ enrollment, scoreCache, onScoresCached }: StudentCardProp
           )}
         </Animated.View>
       ) : null}
-
-      <AddScoreModal
-        visible={addScoreVisible}
-        enrollmentId={enrollment.id}
-        studentName={displayName}
-        onClose={() => setAddScoreVisible(false)}
-        onSaved={handleScoreSaved}
-      />
     </AppCard>
   );
 }
@@ -405,6 +392,11 @@ export default function TestsScreen() {
   const [loadingBatches, setLoadingBatches] = useState(false);
   const [loadingEnrollments, setLoadingEnrollments] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // Add Score modal is rendered once here at the screen root (not inside each
+  // StudentCard row) — a modal nested inside a FlatList row can only ever
+  // cover that row's own box, not the screen, since its absolute positioning
+  // is relative to its immediate parent. See BottomSheetModal gotcha notes.
+  const [scoreModalEnrollment, setScoreModalEnrollment] = useState<EnrollmentRow | null>(null);
 
   // ── Load batches on mount ─────────────────────────────────────────────────
 
@@ -477,6 +469,12 @@ export default function TestsScreen() {
 
   function handleScoresCached(enrollmentId: number, scores: TestScore[]) {
     setScoreCache(prev => ({ ...prev, [enrollmentId]: scores }));
+  }
+
+  function handleScoreSaved(newScore: TestScore) {
+    if (scoreModalEnrollment === null) return;
+    const existing = scoreCache[scoreModalEnrollment.id] ?? [];
+    handleScoresCached(scoreModalEnrollment.id, [newScore, ...existing]);
   }
 
   // ── FlatList header (loading state + hint) ────────────────────────────────
@@ -556,6 +554,7 @@ export default function TestsScreen() {
                 enrollment={item}
                 scoreCache={scoreCache}
                 onScoresCached={handleScoresCached}
+                onAddScore={setScoreModalEnrollment}
               />
             )}
             contentContainerStyle={styles.list}
@@ -584,6 +583,18 @@ export default function TestsScreen() {
           />
         </>
       )}
+
+      <AddScoreModal
+        visible={scoreModalEnrollment !== null}
+        enrollmentId={scoreModalEnrollment?.id ?? null}
+        studentName={
+          scoreModalEnrollment
+            ? scoreModalEnrollment.student_name ?? `Student #${scoreModalEnrollment.student_id}`
+            : ''
+        }
+        onClose={() => setScoreModalEnrollment(null)}
+        onSaved={handleScoreSaved}
+      />
     </SafeAreaView>
   );
 }

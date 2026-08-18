@@ -77,6 +77,66 @@ the sheet" (previously provided by `Modal`'s `onRequestClose`).
   real EAS/standalone build on a device. Verify keyboard behavior in modals on an actual
   build before shipping.
 
+## `BottomSheetModal` (or any modal) must be rendered at the screen root, never inside a `FlatList` row
+
+**Symptom:** a form opened from a row inside a `FlatList` (e.g. Tests screen → expand a
+student → "Add Score") renders tiny and mispositioned — doesn't cover the screen, isn't
+anchored to the bottom, looks "cut off from both top and bottom." Trying to scroll/drag
+within it does nothing useful, and drags in the surrounding area fall through to the
+list underneath and trigger *its* pull-to-refresh instead — which reads as "I can't
+scroll the list" even though the list itself is fine.
+
+**Why:** `BottomSheetModal` fills the screen via `position: absolute` +
+`StyleSheet.absoluteFill`. In React Native that sizes/positions the element relative to
+its **immediate parent**, not the screen. If the modal is instantiated inside a
+row component that's rendered by a `FlatList`'s `renderItem` (as the old
+`tests.tsx` `StudentCard` did — it owned its own `addScoreVisible` state and rendered
+`<AddScoreModal>` as its own last child), the modal's "full screen" is only as big as
+that row's own box — confirmed by logging the overlay's `onLayout`: it reported
+`{width: 315, height: 193}`, i.e. one collapsed card, not the device screen. No amount
+of styling the sheet's own height fixes this; the frame of reference itself is wrong.
+
+**Fix (already in place, `tests.tsx`):** lift the "which row triggered the modal" state
+up to the screen component (`TestsScreen`), pass a callback prop down to the row
+(`onAddScore(enrollment)` instead of local `useState` + inline `<AddScoreModal>`), and
+render a single modal instance at the screen root, as a sibling to the `FlatList` inside
+`SafeAreaView` — exactly the pattern `batches.tsx` (`onAddStudent` → `addStudentBatch`
+state → one `<AddStudentModal>` at the root), `students.tsx`, `fees.tsx`, and
+`attendance.tsx` already used. `tests.tsx` was the only screen that got this wrong.
+
+**Rules for future modal work:**
+- A component rendered by `renderItem` (or any list virtualization) must never own
+  modal-visibility state or render a modal itself. Bubble the trigger up via a callback
+  prop and own the modal + its visibility state in the screen component instead.
+- If a "full screen" overlay renders suspiciously small/mispositioned, check what it's
+  actually nested inside before touching its styles — log `onLayout` on the overlay
+  itself; if the numbers look like a list row instead of a device screen, this is why.
+
+## `BottomSheetModal`'s sheet needs `maxHeight` on the `ScrollView` itself, not a wrapping `View`
+
+**Symptom A — long form cut off:** a form with several fields (e.g. Add Score: name,
+subject, date, max marks, obtained marks) opens cut off — the top (title, first
+field(s)) is pushed off-screen above the viewport, with no way to scroll up to it.
+**Symptom B — sheet renders tiny:** attempting fix A by wrapping the content in a
+`ScrollView` inside a `<View style={{maxHeight}}>` instead makes the whole sheet render
+tiny and centered, covering neither the top nor the bottom of the screen.
+
+**Why:** the sheet is anchored to the bottom of the overlay (`justifyContent:
+'flex-end'`) with no height cap, so (A) it renders at its full natural content height
+regardless of screen size — once content is taller than the screen the excess extends
+above the top edge, unreachable with no scroll container. Fixing that by giving a
+*wrapping* `View` a `maxHeight` and putting an unstyled `ScrollView` inside it causes (B):
+a plain `View` auto-sizes to its content, but `ScrollView` does not — its outer frame
+needs the `height`/`maxHeight` on its **own** `style` prop or it collapses instead of
+growing with content, so the size constraint has to go on the `ScrollView`, not a `View`
+wrapping it.
+
+**Fix (already in place):** put `maxHeight` (currently `88%`) directly on the
+`ScrollView`'s `style`, and put padding on its `contentContainerStyle` instead
+(`keyboardShouldPersistTaps="handled"` so field taps still register while a
+picker/keyboard is up). This lets the sheet shrink-wrap short forms (no empty scroll
+space) and only engage scrolling once content actually exceeds the cap.
+
 ## KNOWN ISSUE / TODO: no returning-student flow — every launch re-runs onboarding
 
 **Symptom:** a student who has already logged in once (phone + OTP, landed on
@@ -168,7 +228,7 @@ Laws of UX, WCAG 2.1.*
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **BATCHBOOK_APP** (851 symbols, 1352 relationships, 11 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **BATCHBOOK_APP** (899 symbols, 1415 relationships, 11 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

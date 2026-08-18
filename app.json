@@ -7,6 +7,12 @@
     "icon": "./assets/images/icon.png",
     "scheme": "batchbookapp",
     "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "in.batchbook.batchbook",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#1A1B22",

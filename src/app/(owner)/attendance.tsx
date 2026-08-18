@@ -519,25 +519,6 @@ export default function AttendanceScreen() {
 
   const listHeader = (
     <View>
-      {/* Batch chips — same pattern as fees/students screens */}
-      {batches.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterRow}
-          contentContainerStyle={styles.filterContent}
-        >
-          {batches.map(b => (
-            <FilterChip
-              key={b.id}
-              label={b.name}
-              active={selectedBatchId === b.id}
-              onPress={() => setSelectedBatchId(b.id)}
-            />
-          ))}
-        </ScrollView>
-      )}
-
       {sessions.length > 0 && (
         <AppText variant="caption" color={C.text3} style={styles.sessionHint}>
           {sessions.length} session{sessions.length !== 1 ? 's' : ''} — tap to view or edit attendance
@@ -585,36 +566,57 @@ export default function AttendanceScreen() {
           </AppText>
         </View>
       ) : (
-        <FlatList<Session>
-          data={sessions}
-          keyExtractor={item => item.id.toString()}
-          renderItem={({ item }) => (
-            <SessionCard session={item} enrollments={enrollments} />
+        <>
+          {/* Batch chips — same pattern as fees/students screens */}
+          {batches.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterRow}
+              contentContainerStyle={styles.filterContent}
+            >
+              {batches.map(b => (
+                <FilterChip
+                  key={b.id}
+                  label={b.name}
+                  active={selectedBatchId === b.id}
+                  onPress={() => setSelectedBatchId(b.id)}
+                />
+              ))}
+            </ScrollView>
           )}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={C.primary}
-            />
-          }
-          ListHeaderComponent={listHeader}
-          ListEmptyComponent={
-            !loading ? (
-              <View style={styles.emptySessions}>
-                <AppText size={28}>🗓️</AppText>
-                <AppText variant="subheading" style={{ marginTop: 10 }}>
-                  No sessions yet
-                </AppText>
-                <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.xs }}>
-                  Tap + to start a new session for this batch.
-                </AppText>
-              </View>
-            ) : null
-          }
-        />
+
+          <FlatList<Session>
+            data={sessions}
+            keyExtractor={item => item.id.toString()}
+            renderItem={({ item }) => (
+              <SessionCard session={item} enrollments={enrollments} />
+            )}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={C.primary}
+              />
+            }
+            ListHeaderComponent={listHeader}
+            ListEmptyComponent={
+              !loading ? (
+                <View style={styles.emptySessions}>
+                  <AppText size={28}>🗓️</AppText>
+                  <AppText variant="subheading" style={{ marginTop: 10 }}>
+                    No sessions yet
+                  </AppText>
+                  <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.xs }}>
+                    Tap + to start a new session for this batch.
+                  </AppText>
+                </View>
+              ) : null
+            }
+          />
+        </>
       )}
 
       <CreateSessionModal

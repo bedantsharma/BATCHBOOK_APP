@@ -653,25 +653,6 @@ export default function FeesScreen() {
         </View>
       </View>
 
-      {/* Batch Chips */}
-      {batches.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterRow}
-          contentContainerStyle={styles.filterContent}
-        >
-          {batches.map(b => (
-            <FilterChip
-              key={b.id}
-              label={b.name}
-              active={selectedBatchId === b.id}
-              onPress={() => setSelectedBatchId(b.id)}
-            />
-          ))}
-        </ScrollView>
-      )}
-
       {/* No batches state */}
       {batches.length === 0 && !dashLoading && (
         <View style={styles.empty}>
@@ -757,6 +738,25 @@ export default function FeesScreen() {
       <View style={styles.screenHeader}>
         <AppText variant="heading">Fee Management</AppText>
       </View>
+
+      {/* Batch Chips */}
+      {batches.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterRow}
+          contentContainerStyle={styles.filterContent}
+        >
+          {batches.map(b => (
+            <FilterChip
+              key={b.id}
+              label={b.name}
+              active={selectedBatchId === b.id}
+              onPress={() => setSelectedBatchId(b.id)}
+            />
+          ))}
+        </ScrollView>
+      )}
 
       <FlatList<FeeRecordRow>
         data={records}

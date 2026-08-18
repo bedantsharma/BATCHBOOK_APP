@@ -479,33 +479,10 @@ export default function TestsScreen() {
     setScoreCache(prev => ({ ...prev, [enrollmentId]: scores }));
   }
 
-  // ── FlatList header (batch chips + hints) ─────────────────────────────────
+  // ── FlatList header (loading state + hint) ────────────────────────────────
 
   const listHeader = (
     <View>
-      {batches.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterRow}
-          contentContainerStyle={styles.filterContent}
-        >
-          {batches.map(b => (
-            <FilterChip
-              key={b.id}
-              label={b.name}
-              active={selectedBatchId === b.id}
-              onPress={() => {
-                if (b.id !== selectedBatchId) {
-                  setScoreCache({});
-                  setSelectedBatchId(b.id);
-                }
-              }}
-            />
-          ))}
-        </ScrollView>
-      )}
-
       {loadingBatches || loadingEnrollments ? <SkeletonList count={4} /> : null}
 
       {!loadingBatches &&
@@ -546,40 +523,66 @@ export default function TestsScreen() {
           </AppText>
         </View>
       ) : (
-        <FlatList<EnrollmentRow>
-          data={enrollments}
-          keyExtractor={item => item.id.toString()}
-          renderItem={({ item }) => (
-            <StudentCard
-              enrollment={item}
-              scoreCache={scoreCache}
-              onScoresCached={handleScoresCached}
-            />
+        <>
+          {/* Batch Filter */}
+          {batches.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterRow}
+              contentContainerStyle={styles.filterContent}
+            >
+              {batches.map(b => (
+                <FilterChip
+                  key={b.id}
+                  label={b.name}
+                  active={selectedBatchId === b.id}
+                  onPress={() => {
+                    if (b.id !== selectedBatchId) {
+                      setScoreCache({});
+                      setSelectedBatchId(b.id);
+                    }
+                  }}
+                />
+              ))}
+            </ScrollView>
           )}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={C.primary}
-            />
-          }
-          ListHeaderComponent={listHeader}
-          ListEmptyComponent={
-            !loadingBatches && !loadingEnrollments ? (
-              <View style={styles.emptyStudents}>
-                <AppText size={28}>🎓</AppText>
-                <AppText variant="subheading" style={{ marginTop: 10 }}>
-                  No students in this batch
-                </AppText>
-                <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.xs }}>
-                  Enroll students first via the Batches or Students tab.
-                </AppText>
-              </View>
-            ) : null
-          }
-        />
+
+          <FlatList<EnrollmentRow>
+            data={enrollments}
+            keyExtractor={item => item.id.toString()}
+            renderItem={({ item }) => (
+              <StudentCard
+                enrollment={item}
+                scoreCache={scoreCache}
+                onScoresCached={handleScoresCached}
+              />
+            )}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={C.primary}
+              />
+            }
+            ListHeaderComponent={listHeader}
+            ListEmptyComponent={
+              !loadingBatches && !loadingEnrollments ? (
+                <View style={styles.emptyStudents}>
+                  <AppText size={28}>🎓</AppText>
+                  <AppText variant="subheading" style={{ marginTop: 10 }}>
+                    No students in this batch
+                  </AppText>
+                  <AppText variant="caption" color={C.text2} style={{ marginTop: spacing.xs }}>
+                    Enroll students first via the Batches or Students tab.
+                  </AppText>
+                </View>
+              ) : null
+            }
+          />
+        </>
       )}
     </SafeAreaView>
   );
